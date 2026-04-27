@@ -63,7 +63,7 @@
 - [Save it so you can look back at it]
 
 ## Try It Yourself
-[]
+[https://github.com/AbdullahHassan81/AbdullahHassan81/blob/74285668b6a0a9911c5e5ef6675eecea94e49f67/project-chatgpt-v2.html]
 
 ## What I Learned
 [That features dont matter if the main thing dosent work, features come last. The main things have to work so everything else works]
