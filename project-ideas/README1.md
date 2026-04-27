@@ -45,3 +45,28 @@
 
 **Rough Scope:**
 [Timeline: 2-3 Weeks]
+
+
+# [Law Enforcement Report Tool] MVP
+
+## What It Does
+[This tool helps law enforcement decide if they should dispatch for cases or reports because sometimes the reports they get are false and its a way to save the reports because paper copeis woukd cause problems in the future if they where to ever lose copies or if theres a pile of papers. The tool also saves reports and has some cool features. ]
+
+## How to Use
+1. [Put in the address of the crime]
+2. [Put in the time, incident type, description and and a tag]
+3. [Create the case, pick a option from: Review, Dispatch, Close and Assign]
+4. [It then saves and gives it a case # and audits it]
+
+## Features Implemented
+- [The ability to give the case to a officer]
+- [Save it so you can look back at it]
+
+## Try It Yourself
+[]
+
+## What I Learned
+[That features dont matter if the main thing dosent work, features come last. The main things have to work so everything else works]
+
+## Future Improvements
+[I would add a map, i would add 2-3 layers of authentication, the ability to see if there are any cops in the area(map of cops nearby), zones on a map that determine which place has more crime, shortcuts to crime scenes and more]
