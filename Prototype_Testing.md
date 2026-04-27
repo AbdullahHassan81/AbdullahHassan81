@@ -9,4 +9,4 @@
 - 💭 Observations: [any interesting choices]
 
 ## Decision
-I'm going with [PoeAi] because [It has a whole lot of different AI's I switch to if the regular one doesent work out.]
+I'm going with [ChatGPT] because [I tried using the other AI's and they are very slow. I originally went with poe but it stopped working mid assignment so I had to change my AI.]
