@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Decision Support Tool (Advanced MVP)</title>
+
+<style>
+body {
+    font-family: Arial;
+    margin: 0;
+    background: #f4f6f8;
+}
+
+header {
+    background: #1f3b57;
+    color: white;
+    padding: 12px;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+}
+
+.panel {
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+input, textarea, select {
+    width: 100%;
+    margin-top: 5px;
+    padding: 6px;
+}
+
+button {
+    margin-top: 8px;
+    width: 100%;
+    padding: 8px;
+    background: #1f3b57;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+.case {
+    border: 1px solid #ddd;
+    margin-top: 8px;
+    padding: 6px;
+    border-radius: 6px;
+}
+
+.badge {
+    padding: 2px 6px;
+    font-size: 12px;
+    color: white;
+    border-radius: 4px;
+}
+
+.new { background: gray; }
+.review { background: orange; color:black; }
+.dispatched { background: red; }
+.closed { background: green; }
+
+.small { font-size: 12px; color: #555; }
+
+.error {
+    color: red;
+    font-size: 12px;
+}
+
+#mapFrame {
+    width: 100%;
+    height: 200px;
+    border: none;
+}
+
+.attach {
+    font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h3>Advanced Decision Support Tool (MVP+)</h3>
+</header>
+
+<div class="container">
+
+<!-- ================= INPUT PANEL ================= -->
+<div class="panel">
+<h4>Create Case</h4>
+
+<div id="errorBox" class="error"></div>
+
+<label>Location</label>
+<input id="location">
+
+<button onclick="geocode()">Geocode Location</button>
+
+<label>Time</label>
+<input id="time" type="datetime-local">
+
+<label>Incident Type</label>
+<select id="type">
+<option value="1">Noise</option>
+<option value="2">Suspicious</option>
+<option value="3">Theft</option>
+<option value="4">Violence</option>
+</select>
+
+<label>Description</label>
+<textarea id="desc"></textarea>
+
+<label>Tags</label>
+<select id="tags">
+<option value="none">None</option>
+<option value="anonymous">Anonymous</option>
+<option value="repeat">Repeat Caller</option>
+</select>
+
+<label>Evidence Tags (comma separated)</label>
+<input id="evidenceTags" placeholder="weapon, witness, photo">
+
+<label>Attachments</label>
+<input type="file" id="files" multiple>
+
+<button onclick="createCase()">Submit Case</button>
+
+<div id="analysis"></div>
+</div>
+
+<!-- ================= CASE PANEL ================= -->
+<div class="panel">
+<h4>Cases</h4>
+<div id="cases"></div>
+</div>
+
+<!-- ================= MAP + LOGS ================= -->
+<div class="panel">
+<h4>Map View</h4>
+<iframe id="mapFrame"></iframe>
+
+<h4>Audit Log</h4>
+<div id="logs"></div>
+</div>
+
+</div>
+
+<script>
+
+/* ================= STORAGE ================= */
+let cases = JSON.parse(localStorage.getItem("cases") || "[]");
+let logs = JSON.parse(localStorage.getItem("logs") || "[]");
+
+/* ================= HQ (reference point) ================= */
+const HQ = { lat: 35.41, lon: -78.74 }; // Buies Creek area reference
+
+/* ================= INIT ================= */
+renderCases();
+renderLogs();
+
+/* ================= VALIDATION ================= */
+function validate() {
+    let errors = [];
+    if (!location.value.trim()) errors.push("Location required");
+    if (!time.value) errors.push("Time required");
+    if (!desc.value.trim()) errors.push("Description required");
+
+    if (desc.value.length < 10) errors.push("Description too short");
+
+    document.getElementById("errorBox").innerText = errors.join("\n");
+    return errors.length === 0;
+}
+
+/* ================= GEOCODING ================= */
+async function geocode() {
+    let query = location.value;
+    if (!query) return;
+
+    let res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}`);
+    let data = await res.json();
+
+    if (data.length > 0) {
+        let place = data[0];
+        location.dataset.lat = place.lat;
+        location.dataset.lon = place.lon;
+
+        updateMap(place.lat, place.lon);
+
+        alert("Location geocoded!");
+    }
+}
+
+/* ================= MAP ================= */
+function updateMap(lat, lon) {
+    document.getElementById("mapFrame").src =
+        `https://www.openstreetmap.org/export/embed.html?marker=${lat},${lon}&layer=mapnik`;
+}
+
+/* ================= DISTANCE ================= */
+function distance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+
+    const a =
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1*Math.PI/180) *
+        Math.cos(lat2*Math.PI/180) *
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+
+    return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+/* ================= CREATE CASE ================= */
+function createCase() {
+
+    if (!validate()) return;
+
+    let files = document.getElementById("files").files;
+    let attachments = [];
+
+    let readerPromises = [];
+
+    for (let f of files) {
+        let reader = new FileReader();
+
+        let p = new Promise(resolve => {
+            reader.onload = () => {
+                resolve({
+                    name: f.name,
+                    data: reader.result
+                });
+            };
+        });
+
+        reader.readAsDataURL(f);
+        readerPromises.push(p);
+    }
+
+    Promise.all(readerPromises).then(att => {
+
+        let lat = parseFloat(location.dataset.lat || HQ.lat);
+        let lon = parseFloat(location.dataset.lon || HQ.lon);
+
+        let d = distance(HQ.lat, HQ.lon, lat, lon);
+
+        let c = {
+            id: Date.now(),
+            location: location.value,
+            lat,
+            lon,
+            time: time.value,
+            type: type.value,
+            desc: desc.value,
+            tags: tags.value,
+            evidence: evidenceTags.value.split(",").map(x => x.trim()),
+            attachments: att,
+            status: "New",
+            credibility: 60,
+            distanceFromHQ: d.toFixed(2)
+        };
+
+        // scoring
+        if (c.tags === "anonymous") c.credibility -= 20;
+        if (c.tags === "repeat") c.credibility += 10;
+        if (c.desc.length > 80) c.credibility += 10;
+
+        cases.push(c);
+        localStorage.setItem("cases", JSON.stringify(cases));
+
+        log("CASE_CREATED", c.id);
+
+        renderCases();
+    });
+}
+
+/* ================= STATUS ================= */
+function updateStatus(id, s) {
+    let c = cases.find(x => x.id === id);
+    c.status = s;
+    log("STATUS_CHANGE", id + " -> " + s);
+    renderCases();
+}
+
+/* ================= LOG ================= */
+function log(action, details) {
+    logs.push({
+        time: new Date().toLocaleString(),
+        action,
+        details
+    });
+
+    localStorage.setItem("logs", JSON.stringify(logs));
+    renderLogs();
+}
+
+/* ================= RENDER CASES ================= */
+function renderCases() {
+    let el = document.getElementById("cases");
+    el.innerHTML = "";
+
+    cases.slice().reverse().forEach(c => {
+
+        let badge =
+            c.status === "New" ? "new" :
+            c.status === "Under Review" ? "review" :
+            c.status === "Dispatched" ? "dispatched" :
+            "closed";
+
+        el.innerHTML += `
+        <div class="case">
+            <strong>#${c.id}</strong>
+            <span class="badge ${badge}">${c.status}</span><br>
+
+            <div class="small">${c.location}</div>
+            <div class="small">Distance: ${c.distanceFromHQ} km</div>
+            <div class="small">Credibility: ${c.credibility}</div>
+
+            <button onclick="updateStatus(${c.id}, 'Under Review')">Review</button>
+            <button onclick="updateStatus(${c.id}, 'Dispatched')">Dispatch</button>
+            <button onclick="updateStatus(${c.id}, 'Closed')">Close</button>
+
+            <div class="attach">
+                <strong>Evidence:</strong> ${c.evidence.join(", ")}
+            </div>
+
+            <div class="attach">
+                ${c.attachments.map(a =>
+                    `<a href="${a.data}" target="_blank">${a.name}</a>`
+                ).join("<br>")}
+            </div>
+        </div>
+        `;
+    });
+}
+
+/* ================= RENDER LOGS ================= */
+function renderLogs() {
+    let el = document.getElementById("logs");
+    el.innerHTML = "";
+
+    logs.slice().reverse().forEach(l => {
+        el.innerHTML += `
+        <div class="small">
+            <b>${l.action}</b><br>
+            ${l.details}<br>
+            ${l.time}
+        </div><hr>`;
+    });
+}
+
+</script>
+
+</body>
+</html>

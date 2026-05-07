@@ -1,0 +1,1094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Decision Support Tool for Local Law Enforcement</title>
+  <!--
+    Single-page MVP: Decision Support Tool for Local Law Enforcement
+    - No external libraries
+    - All logic is rule-based and runs in-browser
+    - Data is stored in-memory (page refresh clears it)
+  -->
+  <style>
+    /* ====== Base Layout & Typography ====== */
+    * {
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    .app-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px 16px 40px;
+    }
+
+    h1, h2, h3 {
+      margin: 0 0 8px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    p {
+      margin: 0 0 8px;
+      color: #4b5563;
+      font-size: 14px;
+    }
+
+    .subtitle {
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    /* ====== Layout Sections ====== */
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 16px 18px 18px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+      border: 1px solid #e5e7eb;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-mvp {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+
+    .badge-live {
+      background: #ecfdf3;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .badge-muted {
+      background: #f3f4f6;
+      color: #4b5563;
+      border: 1px solid #e5e7eb;
+    }
+
+    /* ====== Form Styles ====== */
+    form {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .label-hint {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    input[type="text"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      padding: 7px 9px;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      background: #f9fafb;
+    }
+
+    input[type="text"]:focus,
+    input[type="datetime-local"]:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25);
+      background: #ffffff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 70px;
+      max-height: 200px;
+    }
+
+    .checkbox-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .checkbox-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: #4b5563;
+    }
+
+    .checkbox-item input {
+      margin: 0;
+    }
+
+    .form-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .helper-text {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .error-text {
+      font-size: 12px;
+      color: #b91c1c;
+      margin-top: 4px;
+    }
+
+    /* ====== Buttons ====== */
+    .btn {
+      border-radius: 999px;
+      border: none;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: #1d4ed8;
+      color: #ffffff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: #1e40af;
+      transform: translateY(-0.5px);
+      box-shadow: 0 2px 4px rgba(15, 23, 42, 0.25);
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .btn-small {
+      padding: 4px 10px;
+      font-size: 11px;
+    }
+
+    /* ====== Output Panel ====== */
+    .output-section {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: 1.1fr 1.1fr;
+      gap: 10px;
+    }
+
+    @media (max-width: 700px) {
+      .output-section {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .output-block {
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+    }
+
+    .output-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #4b5563;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .output-value {
+      font-size: 22px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .output-subvalue {
+      font-size: 13px;
+      color: #4b5563;
+      margin-top: 2px;
+    }
+
+    .confidence-low {
+      color: #b91c1c;
+    }
+
+    .confidence-medium {
+      color: #b45309;
+    }
+
+    .confidence-high {
+      color: #15803d;
+    }
+
+    .recommendation-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    .rec-dispatch {
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .rec-verify {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    .rec-log {
+      background: #e5e7eb;
+      color: #374151;
+      border: 1px solid #d1d5db;
+    }
+
+    .output-note {
+      font-size: 11px;
+      color: #6b7280;
+      margin-top: 6px;
+    }
+
+    /* ====== Stored Records Table ====== */
+    .records-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 6px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .records-meta {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    th, td {
+      padding: 6px 6px;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+      vertical-align: top;
+    }
+
+    th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #6b7280;
+      background: #f9fafb;
+    }
+
+    tr:nth-child(even) td {
+      background: #f9fafb;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 500;
+      margin-right: 4px;
+      margin-top: 2px;
+    }
+
+    .tag-anon {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .tag-repeat {
+      background: #e0f2fe;
+      color: #0369a1;
+    }
+
+    .tag-known {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .tag-other {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .pill-small {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+
+    .pill-low {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .pill-medium {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .pill-high {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .pill-rec-dispatch {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .pill-rec-verify {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .pill-rec-log {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .no-records {
+      font-size: 12px;
+      color: #9ca3af;
+      padding: 6px 0;
+    }
+
+    /* ====== Small Utility Elements ====== */
+    .divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 10px 0;
+    }
+
+    .pill-decision {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .pill-decision span {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+    }
+
+    .muted {
+      color: #9ca3af;
+    }
+
+    .text-strong {
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- ====== App Header / Context ====== -->
+    <header style="margin-bottom: 16px;">
+      <div class="card-header">
+        <div>
+          <h1>Decision Support Tool</h1>
+          <p class="subtitle">
+            Lightweight, rule-based support for 911 dispatchers and supervisors. Tool assists—final judgment remains with the human.
+          </p>
+        </div>
+        <span class="badge badge-mvp">MVP • Local Law Enforcement</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- ====== LEFT: Report Intake & Output ====== -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>Report intake</h2>
+            <p class="subtitle">Step 1–3: Enter details, run rule-based scoring, review recommendation.</p>
+          </div>
+        </div>
+
+        <!-- ====== Report Intake Form ====== -->
+        <form id="reportForm">
+          <!-- Location -->
+          <div class="field-group">
+            <label for="location">Location <span class="label-hint">(address, intersection, or landmark)</span></label>
+            <input type="text" id="location" name="location" placeholder="e.g., 1200 Main St, near City Park" required />
+          </div>
+
+          <!-- Time -->
+          <div class="field-group">
+            <label for="time">Time of incident <span class="label-hint">(approximate is acceptable)</span></label>
+            <input type="datetime-local" id="time" name="time" />
+          </div>
+
+          <!-- Incident Type -->
+          <div class="field-group">
+            <label for="incidentType">Type of incident</label>
+            <select id="incidentType" name="incidentType" required>
+              <option value="">Select type...</option>
+              <option value="violent">Violent crime / immediate danger</option>
+              <option value="property">Property crime / theft / vandalism</option>
+              <option value="disturbance">Disturbance / noise / dispute</option>
+              <option value="traffic">Traffic / collision / hazard</option>
+              <option value="suspicious">Suspicious activity</option>
+              <option value="other">Other / unclear</option>
+            </select>
+          </div>
+
+          <!-- Caller Info & Tags -->
+          <div class="field-group">
+            <label for="callerId">Caller identifier <span class="label-hint">(optional)</span></label>
+            <input type="text" id="callerId" name="callerId" placeholder="Name, phone, or internal ID (leave blank if anonymous)" />
+            <div class="checkbox-row">
+              <label class="checkbox-item">
+                <input type="checkbox" id="tagAnonymous" />
+                Anonymous caller
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="tagRepeatCaller" />
+                Repeat caller / prior reports
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="tagKnownReliable" />
+                Known reliable caller
+              </label>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="field-group">
+            <label for="description">Description of incident</label>
+            <textarea id="description" name="description" placeholder="Key details: who, what, where, weapons, injuries, vehicles, etc." required></textarea>
+          </div>
+
+          <!-- Dispatcher Decision (Step 4) -->
+          <div class="field-group">
+            <label for="dispatcherDecision">Dispatcher decision <span class="label-hint">(after reviewing recommendation)</span></label>
+            <select id="dispatcherDecision" name="dispatcherDecision">
+              <option value="">Select decision...</option>
+              <option value="dispatch">Dispatch units</option>
+              <option value="hold_verify">Hold / verify details</option>
+              <option value="log_only">Log only / no dispatch</option>
+            </select>
+          </div>
+
+          <!-- Form Footer -->
+          <div class="form-footer">
+            <div>
+              <button type="submit" class="btn btn-primary">
+                Run scoring & save record
+              </button>
+            </div>
+            <div class="helper-text">
+              Inputs are validated and scored using simple rules. No external databases or automation are used.
+            </div>
+          </div>
+
+          <div id="formError" class="error-text" style="display:none;"></div>
+        </form>
+
+        <!-- ====== Output: Credibility & Recommendation ====== -->
+        <div class="divider"></div>
+        <h3 style="font-size: 13px; margin-bottom: 4px;">Decision support output</h3>
+        <p class="subtitle">
+          Step 3–4: Use the score, confidence label, and recommended action as guidance—not as a replacement for judgment.
+        </p>
+
+        <div class="output-section">
+          <!-- Credibility Score -->
+          <div class="output-block">
+            <div class="output-title">Credibility score</div>
+            <div class="output-value" id="scoreDisplay">—</div>
+            <div class="output-subvalue">
+              Confidence: <span id="confidenceLabel" class="muted">Not yet scored</span>
+            </div>
+            <div class="output-note" id="scoreNotes">
+              Once you submit a report, a 1–100 score and Low/Medium/High confidence label will appear here.
+            </div>
+          </div>
+
+          <!-- Recommendation -->
+          <div class="output-block">
+            <div class="output-title">Recommended action</div>
+            <div id="recommendationPill" class="recommendation-pill rec-log">
+              Awaiting input
+            </div>
+            <div class="output-subvalue" id="recommendationSummary">
+              The tool will combine credibility and incident severity to suggest: Dispatch immediately, Verify before dispatch, or Log only.
+            </div>
+            <div class="output-note">
+              Final decision is recorded separately and can override this recommendation.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ====== RIGHT: Stored Records / History ====== -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>Stored reports</h2>
+            <p class="subtitle">
+              Step 5: Recent reports and decisions (in-memory only; cleared on page refresh).
+            </p>
+          </div>
+          <span class="badge badge-muted">Local session</span>
+        </div>
+
+        <div class="records-header">
+          <div class="records-meta" id="recordsMeta">
+            No reports stored yet.
+          </div>
+          <button id="clearRecordsBtn" class="btn btn-secondary btn-small" type="button">
+            Clear session
+          </button>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table id="recordsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Time & location</th>
+                <th>Incident & tags</th>
+                <th>Score</th>
+                <th>Recommendation</th>
+                <th>Decision</th>
+              </tr>
+            </thead>
+            <tbody id="recordsBody">
+              <tr>
+                <td colspan="6" class="no-records">
+                  No records yet. Submit a report to see it logged here.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="helper-text" style="margin-top: 8px;">
+          Future versions could persist this data to a database and support pattern recognition, caller reputation, and supervisor dashboards.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // In-memory storage for reports (MVP: no external database)
+    // ============================================================
+    const records = [];
+
+    // ============================================================
+    // Utility: Basic rule-based credibility scoring
+    // ------------------------------------------------------------
+    // This function implements simple, transparent rules:
+    // - Start from a base score
+    // - Adjust for caller identity, tags, and description quality
+    // - Map numeric score to a confidence label
+    // ============================================================
+    function computeCredibilityScore({ callerId, isAnonymous, isRepeatCaller, isKnownReliable, description }) {
+      let score = 50; // base score
+
+      // Caller identity rules
+      if (isKnownReliable) {
+        score += 25; // strong boost for known reliable caller
+      } else if (callerId && !isAnonymous) {
+        score += 10; // identified caller
+      }
+
+      if (isAnonymous && !callerId) {
+        score -= 15; // anonymous with no identifier
+      }
+
+      if (isRepeatCaller) {
+        // Repeat callers can be either helpful or noisy.
+        // For MVP, we apply a small penalty to encourage verification.
+        score -= 5;
+      }
+
+      // Description quality rules (very simple heuristics)
+      const desc = (description || "").trim();
+      const wordCount = desc ? desc.split(/\s+/).length : 0;
+
+      if (wordCount < 5) {
+        score -= 15; // extremely vague
+      } else if (wordCount < 15) {
+        score -= 5; // somewhat limited detail
+      } else if (wordCount > 30) {
+        score += 5; // more detailed description
+      }
+
+      // Presence of some key terms (non-exhaustive, just illustrative)
+      const lowerDesc = desc.toLowerCase();
+      const strongKeywords = ["weapon", "gun", "knife", "shots", "shooting", "explosion", "hostage"];
+      const moderateKeywords = ["injured", "bleeding", "screaming", "fight", "threat", "breaking in"];
+
+      if (strongKeywords.some(k => lowerDesc.includes(k))) {
+        score += 10;
+      } else if (moderateKeywords.some(k => lowerDesc.includes(k))) {
+        score += 5;
+      }
+
+      // Clamp score between 1 and 100
+      score = Math.max(1, Math.min(100, score));
+
+      // Map to confidence label
+      let label = "Medium";
+      if (score < 40) {
+        label = "Low";
+      } else if (score > 70) {
+        label = "High";
+      }
+
+      return { score, label };
+    }
+
+    // ============================================================
+    // Utility: Severity scoring based on incident type
+    // ------------------------------------------------------------
+    // This is intentionally simple and transparent:
+    // - Violent / immediate danger: highest severity
+    // - Property / traffic / disturbance: moderate
+    // - Suspicious / other: lower
+    // ============================================================
+    function computeSeverity(incidentType) {
+      switch (incidentType) {
+        case "violent":
+          return 3; // high severity
+        case "property":
+        case "traffic":
+        case "disturbance":
+          return 2; // medium severity
+        case "suspicious":
+        case "other":
+        default:
+          return 1; // low severity
+      }
+    }
+
+    // ============================================================
+    // Utility: Recommendation based on credibility + severity
+    // ------------------------------------------------------------
+    // Simple rule matrix:
+    // - High severity + medium/high credibility => Dispatch immediately
+    // - Medium severity + low credibility => Verify before dispatch
+    // - Low severity + low credibility => Log only
+    // - Otherwise => Verify before dispatch (default)
+    // ============================================================
+    function computeRecommendation(score, confidenceLabel, severity) {
+      const isHighCred = score > 70 || confidenceLabel === "High";
+      const isLowCred = score < 40 || confidenceLabel === "Low";
+
+      let recommendation = "Verify before dispatch";
+
+      if (severity === 3 && (isHighCred || score >= 60)) {
+        recommendation = "Dispatch immediately";
+      } else if (severity === 1 && isLowCred) {
+        recommendation = "Log only";
+      } else if (severity === 2 && isLowCred) {
+        recommendation = "Verify before dispatch";
+      }
+
+      return recommendation;
+    }
+
+    // ============================================================
+    // UI Helpers: Update output panel
+    // ============================================================
+    function updateOutputPanel({ score, confidenceLabel, recommendation }) {
+      const scoreDisplay = document.getElementById("scoreDisplay");
+      const confidenceLabelEl = document.getElementById("confidenceLabel");
+      const scoreNotes = document.getElementById("scoreNotes");
+      const recommendationPill = document.getElementById("recommendationPill");
+      const recommendationSummary = document.getElementById("recommendationSummary");
+
+      // Score & confidence
+      scoreDisplay.textContent = score;
+      confidenceLabelEl.textContent = confidenceLabel + " confidence";
+
+      confidenceLabelEl.classList.remove("confidence-low", "confidence-medium", "confidence-high", "muted");
+      if (confidenceLabel === "Low") {
+        confidenceLabelEl.classList.add("confidence-low");
+      } else if (confidenceLabel === "Medium") {
+        confidenceLabelEl.classList.add("confidence-medium");
+      } else if (confidenceLabel === "High") {
+        confidenceLabelEl.classList.add("confidence-high");
+      }
+
+      scoreNotes.textContent =
+        "Score is based on caller identity, description detail, and simple keyword checks. It is a guide, not a verdict.";
+
+      // Recommendation pill
+      recommendationPill.textContent = recommendation;
+      recommendationPill.classList.remove("rec-dispatch", "rec-verify", "rec-log");
+
+      if (recommendation === "Dispatch immediately") {
+        recommendationPill.classList.add("rec-dispatch");
+        recommendationSummary.textContent =
+          "High-severity and credible: strongly consider immediate dispatch while following local protocols.";
+      } else if (recommendation === "Verify before dispatch") {
+        recommendationPill.classList.add("rec-verify");
+        recommendationSummary.textContent =
+          "Some uncertainty or moderate severity: consider clarifying key details before committing resources.";
+      } else {
+        recommendationPill.classList.add("rec-log");
+        recommendationSummary.textContent =
+          "Low severity and low credibility: logging may be sufficient unless additional information emerges.";
+      }
+    }
+
+    // ============================================================
+    // UI Helpers: Render stored records table
+    // ============================================================
+    function renderRecordsTable() {
+      const tbody = document.getElementById("recordsBody");
+      const meta = document.getElementById("recordsMeta");
+
+      // Clear existing rows
+      tbody.innerHTML = "";
+
+      if (records.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 6;
+        cell.className = "no-records";
+        cell.textContent = "No records yet. Submit a report to see it logged here.";
+        row.appendChild(cell);
+        tbody.appendChild(row);
+        meta.textContent = "No reports stored yet.";
+        return;
+      }
+
+      meta.textContent = `${records.length} report${records.length > 1 ? "s" : ""} in this session.`;
+
+      records.forEach((rec, index) => {
+        const row = document.createElement("tr");
+
+        // # index
+        const cellIndex = document.createElement("td");
+        cellIndex.textContent = records.length - index; // newest first
+        row.appendChild(cellIndex);
+
+        // Time & location
+        const cellTimeLoc = document.createElement("td");
+        const timeLine = document.createElement("div");
+        timeLine.className = "muted";
+        timeLine.style.fontSize = "11px";
+        timeLine.textContent = rec.timeDisplay || "Time not provided";
+        const locLine = document.createElement("div");
+        locLine.textContent = rec.location || "Location not provided";
+        cellTimeLoc.appendChild(locLine);
+        cellTimeLoc.appendChild(timeLine);
+        row.appendChild(cellTimeLoc);
+
+        // Incident & tags
+        const cellIncident = document.createElement("td");
+        const incidentLine = document.createElement("div");
+        incidentLine.textContent = rec.incidentTypeLabel;
+        incidentLine.style.fontWeight = "600";
+        incidentLine.style.fontSize = "11px";
+        const tagsLine = document.createElement("div");
+
+        if (rec.isAnonymous) {
+          const t = document.createElement("span");
+          t.className = "tag tag-anon";
+          t.textContent = "Anonymous";
+          tagsLine.appendChild(t);
+        }
+        if (rec.isRepeatCaller) {
+          const t = document.createElement("span");
+          t.className = "tag tag-repeat";
+          t.textContent = "Repeat caller";
+          tagsLine.appendChild(t);
+        }
+        if (rec.isKnownReliable) {
+          const t = document.createElement("span");
+          t.className = "tag tag-known";
+          t.textContent = "Known reliable";
+          tagsLine.appendChild(t);
+        }
+        if (rec.callerId && !rec.isAnonymous) {
+          const t = document.createElement("span");
+          t.className = "tag tag-other";
+          t.textContent = "ID: " + rec.callerId;
+          tagsLine.appendChild(t);
+        }
+
+        if (!tagsLine.hasChildNodes()) {
+          const t = document.createElement("span");
+          t.className = "tag tag-other";
+          t.textContent = "No tags";
+          tagsLine.appendChild(t);
+        }
+
+        cellIncident.appendChild(incidentLine);
+        cellIncident.appendChild(tagsLine);
+        row.appendChild(cellIncident);
+
+        // Score
+        const cellScore = document.createElement("td");
+        const scoreLine = document.createElement("div");
+        scoreLine.textContent = rec.score;
+        scoreLine.style.fontWeight = "600";
+        const confPill = document.createElement("div");
+        confPill.className = "pill-small " +
+          (rec.confidenceLabel === "Low"
+            ? "pill-low"
+            : rec.confidenceLabel === "High"
+            ? "pill-high"
+            : "pill-medium");
+        confPill.textContent = rec.confidenceLabel + " confidence";
+        cellScore.appendChild(scoreLine);
+        cellScore.appendChild(confPill);
+        row.appendChild(cellScore);
+
+        // Recommendation
+        const cellRec = document.createElement("td");
+        const recPill = document.createElement("div");
+        recPill.className = "pill-small " +
+          (rec.recommendation === "Dispatch immediately"
+            ? "pill-rec-dispatch"
+            : rec.recommendation === "Verify before dispatch"
+            ? "pill-rec-verify"
+            : "pill-rec-log");
+        recPill.textContent = rec.recommendation;
+        cellRec.appendChild(recPill);
+        row.appendChild(cellRec);
+
+        // Dispatcher decision
+        const cellDecision = document.createElement("td");
+        const decisionText = document.createElement("div");
+        decisionText.style.fontSize = "11px";
+
+        if (rec.dispatcherDecisionLabel) {
+          const pill = document.createElement("div");
+          pill.className = "pill-decision";
+          pill.innerHTML = `<span>DECISION</span>${rec.dispatcherDecisionLabel}`;
+          cellDecision.appendChild(pill);
+        } else {
+          decisionText.classList.add("muted");
+          decisionText.textContent = "Not recorded";
+          cellDecision.appendChild(decisionText);
+        }
+
+        row.appendChild(cellDecision);
+
+        // Insert newest at top
+        tbody.insertBefore(row, tbody.firstChild);
+      });
+    }
+
+    // ============================================================
+    // Form submission handler
+    // ============================================================
+    document.getElementById("reportForm").addEventListener("submit", function (event) {
+      event.preventDefault();
+      const errorEl = document.getElementById("formError");
+      errorEl.style.display = "none";
+      errorEl.textContent = "";
+
+      // Gather inputs
+      const location = document.getElementById("location").value.trim();
+      const timeValue = document.getElementById("time").value;
+      const incidentType = document.getElementById("incidentType").value;
+      const callerId = document.getElementById("callerId").value.trim();
+      const isAnonymous = document.getElementById("tagAnonymous").checked;
+      const isRepeatCaller = document.getElementById("tagRepeatCaller").checked;
+      const isKnownReliable = document.getElementById("tagKnownReliable").checked;
+      const description = document.getElementById("description").value.trim();
+      const dispatcherDecision = document.getElementById("dispatcherDecision").value;
+
+      // Basic validation
+      if (!location || !incidentType || !description) {
+        errorEl.textContent = "Please provide at least location, incident type, and a brief description.";
+        errorEl.style.display = "block";
+        return;
+      }
+
+      // Compute scoring and recommendation
+      const { score, label: confidenceLabel } = computeCredibilityScore({
+        callerId,
+        isAnonymous,
+        isRepeatCaller,
+        isKnownReliable,
+        description
+      });
+
+      const severity = computeSeverity(incidentType);
+      const recommendation = computeRecommendation(score, confidenceLabel, severity);
+
+      // Update output panel
+      updateOutputPanel({ score, confidenceLabel, recommendation });
+
+      // Prepare record for storage
+      const timeDisplay = timeValue
+        ? new Date(timeValue).toLocaleString()
+        : "";
+
+      const incidentTypeLabelMap = {
+        violent: "Violent / immediate danger",
+        property: "Property crime / theft / vandalism",
+        disturbance: "Disturbance / noise / dispute",
+        traffic: "Traffic / collision / hazard",
+        suspicious: "Suspicious activity",
+        other: "Other / unclear"
+      };
+
+      const dispatcherDecisionLabelMap = {
+        dispatch: "Dispatched units",
+        hold_verify: "Held / verify details",
+        log_only: "Logged only"
+      };
+
+      const record = {
+        location,
+        timeDisplay,
+        incidentType,
+        incidentTypeLabel: incidentTypeLabelMap[incidentType] || incidentType,
+        callerId,
+        isAnonymous,
+        isRepeatCaller,
+        isKnownReliable,
+        description,
+        score,
+        confidenceLabel,
+        recommendation,
+        dispatcherDecision,
+        dispatcherDecisionLabel: dispatcherDecisionLabelMap[dispatcherDecision] || ""
+      };
+
+      records.push(record);
+      renderRecordsTable();
+    });
+
+    // ============================================================
+    // Clear session button
+    // ============================================================
+    document.getElementById("clearRecordsBtn").addEventListener("click", function () {
+      if (!records.length) return;
+      const confirmed = window.confirm("Clear all stored reports for this session? This cannot be undone.");
+      if (!confirmed) return;
+      records.length = 0;
+      renderRecordsTable();
+
+      // Reset output panel to neutral state
+      updateOutputPanel({
+        score: "—",
+        confidenceLabel: "Not yet scored",
+        recommendation: "Log only"
+      });
+      document.getElementById("scoreNotes").textContent =
+        "Once you submit a report, a 1–100 score and Low/Medium/High confidence label will appear here.";
+      const confidenceLabelEl = document.getElementById("confidenceLabel");
+      confidenceLabelEl.classList.remove("confidence-low", "confidence-medium", "confidence-high");
+      confidenceLabelEl.classList.add("muted");
+      const recommendationPill = document.getElementById("recommendationPill");
+      recommendationPill.textContent = "Awaiting input";
+      recommendationPill.classList.remove("rec-dispatch", "rec-verify", "rec-log");
+      recommendationPill.classList.add("rec-log");
+      document.getElementById("recommendationSummary").textContent =
+        "The tool will combine credibility and incident severity to suggest: Dispatch immediately, Verify before dispatch, or Log only.";
+    });
+
+    // Initial render
+    renderRecordsTable();
+  </script>
+</body>
+</html>

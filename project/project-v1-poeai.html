@@ -1,0 +1,1421 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Law Enforcement Decision Support (MVP)</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:#111c33;
+      --panel2:#0f1930;
+      --text:#e7eefc;
+      --muted:#a9b7dc;
+      --line:rgba(255,255,255,.10);
+      --accent:#6aa6ff;
+      --good:#3ddc97;
+      --warn:#ffcc66;
+      --bad:#ff6b6b;
+      --shadow: 0 10px 35px rgba(0,0,0,.35);
+      --radius:16px;
+      --radius2:12px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:var(--sans);
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(106,166,255,.20), transparent 60%),
+                  radial-gradient(900px 700px at 80% 10%, rgba(61,220,151,.15), transparent 55%),
+                  linear-gradient(180deg, #071022, var(--bg));
+      color:var(--text);
+      padding:18px;
+    }
+
+    .app{
+      max-width:1100px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap:16px;
+      align-items:start;
+    }
+
+    header{
+      grid-column:1 / -1;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      padding:16px 18px;
+      box-shadow: var(--shadow);
+    }
+
+    header .top{
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:260px;
+    }
+
+    .title h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+    }
+    .title p{
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      max-width:760px;
+    }
+
+    .badgeRow{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:flex-end;
+    }
+
+    .badge{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      border-radius:999px;
+      padding:8px 10px;
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      gap:8px;
+      align-items:center;
+      white-space:nowrap;
+    }
+
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background:var(--accent);
+      box-shadow: 0 0 0 3px rgba(106,166,255,.18);
+    }
+
+    .panel{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .panel .hd{
+      padding:14px 16px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .panel .hd h2{
+      margin:0;
+      font-size:14px;
+      letter-spacing:.2px;
+    }
+
+    .panel .bd{
+      padding:14px 16px 16px;
+    }
+
+    .grid2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+    }
+
+    label{
+      font-size:12px;
+      color:var(--muted);
+      display:block;
+      margin-bottom:6px;
+    }
+
+    input, select, textarea{
+      width:100%;
+      padding:10px 11px;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      color:var(--text);
+      outline:none;
+    }
+    textarea{min-height:92px; resize:vertical; max-height:220px;}
+    input:focus, select:focus, textarea:focus{
+      border-color: rgba(106,166,255,.55);
+      box-shadow: 0 0 0 4px rgba(106,166,255,.16);
+    }
+
+    .help{
+      margin-top:6px;
+      font-size:12px;
+      color:rgba(233,241,255,.75);
+      line-height:1.35;
+    }
+
+    .row{
+      display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+    }
+
+    .btnRow{
+      margin-top:14px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    button{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:650;
+      font-size:13px;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+    }
+    button:hover{
+      border-color: rgba(106,166,255,.45);
+      background: rgba(106,166,255,.10);
+    }
+    button:active{transform: translateY(1px);}
+    button.primary{
+      border-color: rgba(106,166,255,.55);
+      background: rgba(106,166,255,.18);
+    }
+
+    .smallBtn{
+      padding:8px 10px;
+      font-weight:600;
+      font-size:12px;
+      border-radius:11px;
+    }
+
+    .kpi{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .kpi .card{
+      background: rgba(0,0,0,.16);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius: var(--radius2);
+      padding:12px;
+    }
+    .kpi .label{
+      font-size:12px;
+      margin:0 0 6px 0;
+      color:var(--muted);
+    }
+    .kpi .value{
+      font-size:20px;
+      font-weight:800;
+      letter-spacing:.2px;
+      margin:0;
+      font-family: var(--mono);
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border-radius:999px;
+      padding:8px 10px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.18);
+      font-size:12px;
+      color:var(--muted);
+    }
+    .pill strong{color:var(--text); font-weight:800;}
+
+    .riskBarWrap{
+      margin:12px 0 6px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.14);
+      border-radius: 999px;
+      padding:6px;
+    }
+    .riskBar{
+      height:12px;
+      border-radius: 999px;
+      width:0%;
+      background: linear-gradient(90deg, rgba(255,204,102,.95), rgba(106,166,255,.95), rgba(61,220,151,.95));
+      transition: width .35s ease;
+    }
+
+    .recommend{
+      margin-top:12px;
+      padding:12px;
+      border-radius: var(--radius2);
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.16);
+    }
+    .recommend h3{
+      margin:0 0 8px 0;
+      font-size:13px;
+      letter-spacing:.2px;
+    }
+
+    .recommend .action{
+      font-size:16px;
+      font-weight:900;
+      letter-spacing:.2px;
+      line-height:1.25;
+      margin-bottom:10px;
+    }
+
+    .tagList{
+      margin-top:8px;
+      display:flex; gap:8px; flex-wrap:wrap;
+    }
+    .tag{
+      border:1px dashed rgba(255,255,255,.18);
+      background: rgba(255,255,255,.04);
+      border-radius:999px;
+      padding:6px 9px;
+      font-size:12px;
+      color:rgba(231,238,252,.86);
+    }
+
+    details{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.14);
+      border-radius: var(--radius2);
+      padding:12px 12px;
+      margin-top:12px;
+    }
+    summary{
+      cursor:pointer;
+      font-weight:800;
+      color:rgba(231,238,252,.95);
+      font-size:13px;
+      outline:none;
+    }
+    .explain{
+      margin-top:10px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.45;
+    }
+    .ruleTable{
+      margin-top:10px;
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+      color:rgba(231,238,252,.88);
+    }
+    .ruleTable th, .ruleTable td{
+      border-bottom:1px solid rgba(255,255,255,.10);
+      padding:8px 6px;
+      vertical-align:top;
+    }
+    .ruleTable th{
+      text-align:left;
+      color:var(--muted);
+      font-weight:800;
+      font-size:12px;
+    }
+    .pos{color:var(--good); font-weight:850;}
+    .neg{color:var(--bad); font-weight:850;}
+
+    .history{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .histItem{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.14);
+      border-radius: var(--radius2);
+      padding:12px;
+    }
+    .histTop{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      justify-content:space-between;
+    }
+    .histTitle{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .histTitle strong{
+      font-size:13px;
+      letter-spacing:.2px;
+    }
+    .histTitle span{
+      font-size:12px;
+      color:var(--muted);
+    }
+    .histMeta{
+      text-align:right;
+      font-family: var(--mono);
+      color:rgba(231,238,252,.9);
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+    .histDesc{
+      margin-top:8px;
+      color:rgba(233,241,255,.78);
+      font-size:12.5px;
+      line-height:1.45;
+    }
+
+    .divider{
+      height:1px; background: rgba(255,255,255,.10); margin:12px 0;
+    }
+
+    .decisionRow{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:10px;
+      margin-top:10px;
+    }
+
+    .radioRow{
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .radio{
+      display:flex;
+      align-items:center;
+      gap:9px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.12);
+      border-radius: 12px;
+      padding:10px 11px;
+      cursor:pointer;
+      user-select:none;
+      flex: 1 1 210px;
+      min-width:210px;
+    }
+    .radio input{width:16px; height:16px;}
+    .radio b{font-size:13px;}
+    .radio small{display:block; color:var(--muted); font-size:12px; margin-top:2px;}
+
+    .footerNote{
+      grid-column:1 / -1;
+      color:rgba(233,241,255,.70);
+      font-size:12px;
+      line-height:1.5;
+      padding:10px 2px 2px;
+    }
+
+    @media (max-width: 980px){
+      .app{grid-template-columns: 1fr; }
+      .kpi{grid-template-columns: 1fr; }
+      .grid2{grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- =========================
+         Header / Product framing
+         ========================= -->
+    <header>
+      <div class="top">
+        <div class="title">
+          <h1>Decision Support Tool — Local Law Enforcement (MVP)</h1>
+          <p>
+            Enter structured incident details and get a <b>rule-based credibility score</b>, a confidence label,
+            and a suggested action. This tool is for <b>decision support only</b>—it does not override human judgment.
+          </p>
+        </div>
+        <div class="badgeRow">
+          <div class="badge"><span class="dot"></span> Rule-based scoring (no ML)</div>
+          <div class="badge">Single-file web app</div>
+          <div class="badge">Stores prior entries (local)</div>
+        </div>
+      </div>
+    </header>
+
+    <!-- =========================
+         Left: Report Intake
+         ========================= -->
+    <section class="panel" aria-label="Report intake">
+      <div class="hd">
+        <h2>Step 1 — Report Entry</h2>
+        <div class="pill" id="validationPill" title="Shows whether required inputs look valid.">
+          <span>Status:</span> <strong>Ready</strong>
+        </div>
+      </div>
+
+      <div class="bd">
+        <div class="grid2">
+          <div>
+            <label for="location">Location</label>
+            <input id="location" type="text" placeholder="e.g., 123 Main St / Near Park Entrance" />
+            <div class="help">Use as much clarity as possible (intersection, landmark, unit number).</div>
+          </div>
+
+          <div>
+            <label for="incidentTime">Time of report</label>
+            <input id="incidentTime" type="datetime-local" />
+            <div class="help">If unknown, choose an estimate.</div>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:12px;">
+          <div>
+            <label for="incidentType">Incident type</label>
+            <select id="incidentType">
+              <option value="">Select…</option>
+              <option value="violent_assault">Violent assault / fight</option>
+              <option value="weapon_threat">Weapon threat</option>
+              <option value="domestic">Domestic disturbance</option>
+              <option value="robbery">Robbery</option>
+              <option value="suspicious_activity">Suspicious activity</option>
+              <option value="theft">Theft / property crime</option>
+              <option value="medical_emergency">Medical emergency</option>
+              <option value="disturbance">Loud disturbance / disturbance</option>
+              <option value="other">Other</option>
+            </select>
+            <div class="help">Used to infer severity tier.</div>
+          </div>
+
+          <div>
+            <label for="severityHint">Severity hint (optional)</label>
+            <select id="severityHint">
+              <option value="auto" selected>Auto (from incident type)</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+            <div class="help">If dispatchers already know severity, override for faster triage.</div>
+          </div>
+        </div>
+
+        <div style="margin-top:12px;">
+          <label for="description">Description</label>
+          <textarea id="description" placeholder="Summarize what was observed or reported. Include key facts (who/what/where/when) and any uncertainties."></textarea>
+          <div class="help">Short factual detail helps consistency checks (used in scoring).</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="grid2">
+          <div>
+            <label for="callerTag">Caller tag (optional)</label>
+            <select id="callerTag">
+              <option value="unknown">Unknown / not stated</option>
+              <option value="anonymous">Anonymous</option>
+              <option value="known_caller">Known caller / previous contact</option>
+              <option value="repeat_caller">Repeat caller / historically consistent</option>
+            </select>
+            <div class="help">Used in credibility scoring.</div>
+          </div>
+
+          <div>
+            <label for="callerReliability">Historical reliability (optional)</label>
+            <select id="callerReliability">
+              <option value="none" selected>Not available</option>
+              <option value="high">High reliability</option>
+              <option value="medium">Medium reliability</option>
+              <option value="low">Low reliability</option>
+            </select>
+            <div class="help">If you have caller history, select it here.</div>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:12px;">
+          <div>
+            <label for="consistencySignals">Consistency signals</label>
+            <select id="consistencySignals">
+              <option value="unknown" selected>Unknown / unclear</option>
+              <option value="consistent">Consistent details</option>
+              <option value="some_discrepancy">Some discrepancies</option>
+              <option value="contradictory">Contradictory details</option>
+            </select>
+            <div class="help">Manual assessment (e.g., caller changed story, unclear timeline).</div>
+          </div>
+
+          <div>
+            <label for="hasImmediateDanger">Immediate danger indicator</label>
+            <select id="hasImmediateDanger">
+              <option value="no" selected>No explicit danger stated</option>
+              <option value="yes">Yes (explicit threat / ongoing danger)</option>
+            </select>
+            <div class="help">Used to prioritize alerts/recommendations.</div>
+          </div>
+        </div>
+
+        <div class="btnRow">
+          <button class="primary" id="btnScore" type="button">Score credibility & recommend</button>
+          <button id="btnFillExample" class="smallBtn" type="button">Fill example</button>
+          <button id="btnReset" class="smallBtn" type="button" style="border-color: rgba(255,255,255,.16);">
+            Reset
+          </button>
+        </div>
+
+        <details open>
+          <summary>Scoring logic (v1 — rules only)</summary>
+          <div class="explain">
+            This MVP uses simple, transparent rules:
+            <ul>
+              <li><b>Credibility</b> starts at a baseline and is adjusted by caller tag, historical reliability, and consistency signals.</li>
+              <li><b>Severity</b> is derived from incident type or your optional override.</li>
+              <li><b>Recommendation</b> combines credibility + severity + immediate danger indicator.</li>
+            </ul>
+            Expand “Rule breakdown” on the right after scoring.
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- =========================
+         Right: Output + Decision + History
+         ========================= -->
+    <section class="panel" aria-label="Decision support output">
+      <div class="hd">
+        <h2>Step 2–5 — Output, Recommendation, & Record</h2>
+        <div class="pill" title="Last computed score label.">
+          <span>Confidence:</span> <strong id="confidencePill">—</strong>
+        </div>
+      </div>
+
+      <div class="bd">
+        <div class="kpi" aria-label="Key outputs">
+          <div class="card">
+            <p class="label">Credibility score</p>
+            <p class="value" id="scoreValue">—</p>
+          </div>
+          <div class="card">
+            <p class="label">Confidence label</p>
+            <p class="value" id="labelValue">—</p>
+          </div>
+          <div class="card">
+            <p class="label">Suggested action</p>
+            <p class="value" id="actionValue" style="font-size:15px; font-weight:900; font-family:var(--sans);">—</p>
+          </div>
+        </div>
+
+        <div class="riskBarWrap" aria-label="Risk visualization">
+          <div class="riskBar" id="riskBar"></div>
+        </div>
+
+        <div class="recommend">
+          <h3>Alert & Recommendation</h3>
+          <div class="action" id="recommendationText">
+            Enter a report and click “Score credibility & recommend”.
+          </div>
+
+          <div class="tagList" id="recommendTags"></div>
+        </div>
+
+        <div class="decisionRow">
+          <div class="divider" style="margin:14px 0 10px;"></div>
+
+          <div>
+            <label>Step 4 — Your final decision (tool assists only)</label>
+            <div class="radioRow">
+              <label class="radio">
+                <input type="radio" name="finalDecision" value="dispatch_immediately" />
+                <div>
+                  <b>Dispatch immediately</b>
+                  <small>Act on threat / high severity</small>
+                </div>
+              </label>
+              <label class="radio">
+                <input type="radio" name="finalDecision" value="verify_before_dispatch" />
+                <div>
+                  <b>Verify before dispatch</b>
+                  <small>Check facts; reduce false positives</small>
+                </div>
+              </label>
+              <label class="radio">
+                <input type="radio" name="finalDecision" value="log_only" />
+                <div>
+                  <b>Log only</b>
+                  <small>No dispatch needed now</small>
+                </div>
+              </label>
+            </div>
+            <div class="help" style="margin-top:8px;">
+              Choose the action your agency would take. The stored record includes tool suggestion + your choice.
+            </div>
+          </div>
+
+          <div class="btnRow" style="margin-top:4px;">
+            <button class="primary" id="btnStore" type="button">Store report & decision</button>
+            <button id="btnClearHistory" class="smallBtn" type="button" style="border-color: rgba(255,255,255,.16);">
+              Clear stored history
+            </button>
+          </div>
+
+          <div class="help" id="storeStatus" aria-live="polite"></div>
+        </div>
+
+        <details style="margin-top:14px;">
+          <summary>Rule breakdown (why this score?)</summary>
+          <div class="explain">
+            <table class="ruleTable" id="ruleTable" aria-label="Rule breakdown table">
+              <thead>
+                <tr>
+                  <th style="width:44%;">Signal</th>
+                  <th style="width:28%;">Adjustment</th>
+                  <th style="width:28%;">Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="3" style="color:var(--muted);">Score not computed yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <div class="divider" style="margin:14px 0;"></div>
+
+        <div class="history" aria-label="Stored report history">
+          <div class="row" style="justify-content:space-between;">
+            <div>
+              <strong style="font-size:13px;">Stored records (local)</strong>
+              <div class="help" style="margin:4px 0 0;">For future pattern recognition (v2). Stored in your browser only.</div>
+            </div>
+            <div class="pill" title="Number of stored records in this browser.">
+              <span>Count:</span> <strong id="historyCount">0</strong>
+            </div>
+          </div>
+
+          <div id="historyList" style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+            <div class="histItem" style="opacity:.95;">
+              <div class="histTop">
+                <div class="histTitle">
+                  <strong>No records yet</strong>
+                  <span>Store a report to build history.</span>
+                </div>
+                <div class="histMeta">—</div>
+              </div>
+              <div class="histDesc">
+                Tip: click “Fill example”, score, choose a final decision, then store.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="footerNote">
+      <b>Operational note:</b> This MVP intentionally avoids ML and external data. All credibility and recommendation logic is transparent, rule-based, and editable in the code.
+    </div>
+  </div>
+
+  <script>
+    /********************************************************************
+     * Single-file MVP — Rule-based Decision Support Tool
+     * - No external libraries
+     * - Runs by opening the HTML file in a browser
+     * - Stores history in localStorage (browser only)
+     ********************************************************************/
+
+    // ---------- DOM helpers ----------
+    const $ = (id) => document.getElementById(id);
+
+    function setValidationStatus(ok, msg){
+      const pill = $("validationPill");
+      pill.querySelector("strong").textContent = ok ? "Ready" : "Check inputs";
+      pill.style.borderColor = ok ? "rgba(255,255,255,.14)" : "rgba(255,107,107,.55)";
+      pill.style.background = ok ? "rgba(255,255,255,.04)" : "rgba(255,107,107,.12)";
+      pill.title = msg || "";
+    }
+
+    // ---------- Storage ----------
+    const STORAGE_KEY = "le_decision_support_history_v1";
+
+    function loadHistory(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return [];
+        const parsed = JSON.parse(raw);
+        if(!Array.isArray(parsed)) return [];
+        return parsed;
+      }catch{
+        return [];
+      }
+    }
+
+    function saveHistory(items){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    }
+
+    function formatDateTime(d){
+      // d is ISO string
+      try{
+        const dt = new Date(d);
+        return dt.toLocaleString();
+      }catch{
+        return d;
+      }
+    }
+
+    function actionLabel(actionKey){
+      switch(actionKey){
+        case "dispatch_immediately": return "Dispatch immediately";
+        case "verify_before_dispatch": return "Verify before dispatch";
+        case "log_only": return "Log only";
+        default: return actionKey || "—";
+      }
+    }
+
+    function severityLabel(sev){
+      if(sev === "high") return "High";
+      if(sev === "medium") return "Medium";
+      if(sev === "low") return "Low";
+      return "—";
+    }
+
+    // ---------- Rule-based scoring engine ----------
+    // Credibility score: 1–100
+    // Confidence label:
+    // - 0–39  => Low
+    // - 40–69 => Medium
+    // - 70–100=> High
+    //
+    // Severity tier: low/medium/high used for recommendation.
+    //
+    // Recommendation:
+    // - High severity + (danger=yes OR credibility >= 40) => Dispatch immediately
+    // - Medium severity + (credibility >= 60 OR danger=yes) => Verify before dispatch
+    // - Otherwise => Log only
+    //
+    // This is intentionally simple and transparent for MVP.
+
+    function inferSeverityFromIncidentType(incidentType){
+      // You can adjust these mappings based on your agency's policy.
+      const map = {
+        violent_assault: "high",
+        weapon_threat: "high",
+        domestic: "high",
+        robbery: "high",
+        medical_emergency: "high",
+        suspicious_activity: "medium",
+        theft: "medium",
+        disturbance: "low",
+        other: "low"
+      };
+      return map[incidentType] || "low";
+    }
+
+    function credibilityScoreAndBreakdown(inputs){
+      // Baseline
+      let score = 50;
+
+      // Each rule returns: { signal, adjustment, notes }
+      const breakdown = [];
+
+      // --- Caller tag ---
+      // Known caller / repeat caller increases confidence.
+      const callerTagAdj = (() => {
+        switch(inputs.callerTag){
+          case "anonymous": return -15;
+          case "known_caller": return +10;
+          case "repeat_caller": return +18;
+          case "unknown":
+          default: return 0;
+        }
+      })();
+      if(callerTagAdj !== 0){
+        breakdown.push({
+          signal: `Caller tag: ${inputs.callerTag.replaceAll("_"," ")}`,
+          adjustment: callerTagAdj,
+          notes: "Adjusts credibility based on caller identity/expected trust."
+        });
+      }
+      score += callerTagAdj;
+
+      // --- Historical reliability ---
+      // Optional override based on known history.
+      let histAdj = 0;
+      if(inputs.callerReliability === "high") histAdj = +12;
+      else if(inputs.callerReliability === "medium") histAdj = +6;
+      else if(inputs.callerReliability === "low") histAdj = -10;
+
+      if(inputs.callerReliability !== "none"){
+        breakdown.push({
+          signal: `Historical reliability: ${inputs.callerReliability}`,
+          adjustment: histAdj,
+          notes: "Uses caller history when available."
+        });
+      }
+      score += histAdj;
+
+      // --- Consistency signals ---
+      let consistencyAdj = 0;
+      if(inputs.consistencySignals === "consistent") consistencyAdj = +14;
+      else if(inputs.consistencySignals === "some_discrepancy") consistencyAdj = -8;
+      else if(inputs.consistencySignals === "contradictory") consistencyAdj = -18;
+
+      if(inputs.consistencySignals !== "unknown"){
+        breakdown.push({
+          signal: `Consistency signals: ${inputs.consistencySignals.replaceAll("_"," ")}`,
+          adjustment: consistencyAdj,
+          notes: "Adjusts credibility based on whether the details appear stable."
+        });
+      }
+      score += consistencyAdj;
+
+      // --- Description quality heuristics (lightweight, not NLP-heavy) ---
+      // We keep this intentionally simple:
+      // - Missing/very short description reduces confidence.
+      // - Description containing explicit uncertainty markers reduces slightly.
+      const desc = (inputs.description || "").trim();
+      const descLen = desc.length;
+
+      let descAdj = 0;
+      let descNotes = "";
+      if(descLen < 20){
+        descAdj = -14;
+        descNotes = "Very short description limits fact completeness.";
+      }else if(descLen < 60){
+        descAdj = -5;
+        descNotes = "Short description may omit key details.";
+      }
+
+      const uncertaintyMarkers = ["not sure", "maybe", "unknown", "i think", "possibly", "unsure", "?"];
+      const lower = desc.toLowerCase();
+      const hasUncertainty = uncertaintyMarkers.some(m => lower.includes(m));
+      if(hasUncertainty){
+        // Small penalty (uncertainty is not always bad, but can reduce confidence).
+        descAdj += -4;
+        descNotes += " Mentions uncertainty.";
+      }
+
+      if(descAdj !== 0){
+        breakdown.push({
+          signal: "Description completeness & uncertainty",
+          adjustment: descAdj,
+          notes: descNotes || "Heuristic adjustment based on description quality."
+        });
+      }
+      score += descAdj;
+
+      // --- Location/time presence checks ---
+      // This is validation-adjacent: if missing, reduce score slightly.
+      let locAdj = 0, timeAdj = 0;
+      if(!(inputs.location || "").trim()) locAdj = -20;
+      if(!(inputs.incidentTime || "").trim()) timeAdj = -10;
+
+      if(locAdj !== 0){
+        breakdown.push({
+          signal: "Location provided",
+          adjustment: locAdj,
+          notes: "Missing location reduces operational usefulness."
+        });
+      }
+      if(timeAdj !== 0){
+        breakdown.push({
+          signal: "Time of report provided",
+          adjustment: timeAdj,
+          notes: "Missing time reduces ability to assess urgency/context."
+        });
+      }
+      score += locAdj + timeAdj;
+
+      // Clamp to 1–100
+      score = Math.max(1, Math.min(100, Math.round(score)));
+
+      // Confidence label
+      let label = "Low";
+      if(score >= 70) label = "High";
+      else if(score >= 40) label = "Medium";
+
+      return { score, label, breakdown };
+    }
+
+    function recommendAction({ credibilityScore, confidenceLabel, severity, hasImmediateDanger }){
+      // severity: low/medium/high
+      // hasImmediateDanger: boolean
+      // confidenceLabel: Low/Medium/High
+      const danger = !!hasImmediateDanger;
+
+      // Simple tiered policy:
+      // - High: dispatch if danger OR credibility >= 40
+      // - Medium: verify if credibility >= 60 OR danger
+      // - Low: log only unless danger and credibility reasonably high
+      let action = "log_only";
+      let tags = [];
+
+      if(severity === "high"){
+        tags.push("High severity");
+        if(danger){
+          tags.push("Immediate danger indicated");
+        }
+        if(danger || credibilityScore >= 40){
+          action = "dispatch_immediately";
+        }else{
+          action = "verify_before_dispatch";
+          tags.push("Credibility too low for immediate dispatch");
+        }
+      }else if(severity === "medium"){
+        tags.push("Medium severity");
+        if(danger || credibilityScore >= 60){
+          action = "verify_before_dispatch";
+        }else{
+          action = "log_only";
+          tags.push("Lower credibility—consider verification");
+        }
+      }else{
+        tags.push("Low severity");
+        // Low severity but danger indicated -> verify at least.
+        if(danger && credibilityScore >= 40){
+          action = "verify_before_dispatch";
+          tags.push("Danger indicator outweighs low severity");
+        }else{
+          action = "log_only";
+        }
+      }
+
+      // Confidence tags
+      if(confidenceLabel === "High") tags.push("High confidence");
+      else if(confidenceLabel === "Medium") tags.push("Medium confidence");
+      else tags.push("Low confidence");
+
+      return { action, tags };
+    }
+
+    // ---------- Validation ----------
+    function validateInputs(){
+      // For MVP: require location, time, incident type, and description (non-empty).
+      // But we won't block scoring; we reduce credibility if missing.
+      const locOk = !!( $("location").value || "" ).trim();
+      const typeOk = !!( $("incidentType").value || "" ).trim();
+      const descOk = ( $("description").value || "" ).trim().length >= 5;
+      const timeOk = !!( $("incidentTime").value || "" ).trim();
+
+      // If type missing, can't infer severity reliably, so mark not OK.
+      const ok = locOk && typeOk && timeOk && descOk;
+
+      let msg = "";
+      if(!ok){
+        const missing = [];
+        if(!locOk) missing.push("location");
+        if(!typeOk) missing.push("incident type");
+        if(!timeOk) missing.push("time");
+        if(!descOk) missing.push("description");
+        msg = "Missing or weak: " + missing.join(", ") + ". Scoring will still run, but results will reflect missingness.";
+      }
+      setValidationStatus(ok, msg);
+      return { ok, locOk, typeOk, descOk, timeOk };
+    }
+
+    // ---------- UI wiring ----------
+    let lastComputed = null; // store last inputs + results
+
+    function readInputs(){
+      const location = $("location").value.trim();
+      const incidentTime = $("incidentTime").value; // datetime-local returns "YYYY-MM-DDTHH:mm"
+      const incidentType = $("incidentType").value;
+      const description = $("description").value.trim();
+
+      const callerTag = $("callerTag").value;
+      const callerReliability = $("callerReliability").value;
+      const consistencySignals = $("consistencySignals").value;
+      const hasImmediateDanger = $("hasImmediateDanger").value === "yes";
+
+      const severityHint = $("severityHint").value; // auto/low/medium/high
+
+      // Normalize incidentTime to ISO for storage when possible
+      let incidentTimeISO = "";
+      if(incidentTime){
+        const dt = new Date(incidentTime);
+        if(!isNaN(dt.getTime())){
+          incidentTimeISO = dt.toISOString();
+        }else{
+          incidentTimeISO = incidentTime; // fallback
+        }
+      }
+
+      const severityAuto = inferSeverityFromIncidentType(incidentType);
+
+      const severity = severityHint === "auto" ? severityAuto : severityHint;
+
+      return {
+        location,
+        incidentTimeLocal: incidentTime, // keep raw local datetime string
+        incidentTimeISO,
+        incidentType,
+        description,
+
+        callerTag,
+        callerReliability,
+        consistencySignals,
+        hasImmediateDanger,
+
+        severity,
+        severityAuto
+      };
+    }
+
+    function updateRuleTable(breakdown){
+      const tbody = $("ruleTable").querySelector("tbody");
+      tbody.innerHTML = "";
+
+      if(!breakdown || breakdown.length === 0){
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td colspan="3" style="color:var(--muted);">No rule adjustments applied.</td>`;
+        tbody.appendChild(tr);
+        return;
+      }
+
+      for(const r of breakdown){
+        const tr = document.createElement("tr");
+
+        const adjClass = r.adjustment >= 0 ? "pos" : "neg";
+        const adjText = `${r.adjustment >= 0 ? "+" : ""}${r.adjustment}`;
+
+        tr.innerHTML = `
+          <td>${escapeHtml(r.signal)}</td>
+          <td class="${adjClass}">${adjText}</td>
+          <td>${escapeHtml(r.notes || "")}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+
+    function escapeHtml(str){
+      return (str ?? "").toString()
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function setResultUI({ score, label, actionKey, tags, severity }){
+      $("scoreValue").textContent = score;
+      $("labelValue").textContent = label;
+      $("actionValue").textContent = actionLabel(actionKey);
+      $("confidencePill").textContent = label;
+
+      // Visual bar: tie to score, but if severity is high, skew slightly up for urgency.
+      let barPct = score;
+      if(severity === "high") barPct = Math.min(100, score + 8);
+      else if(severity === "medium") barPct = Math.min(100, score + 3);
+
+      $("riskBar").style.width = `${barPct}%`;
+
+      const recText = `Recommended: ${actionLabel(actionKey)}.`;
+      $("recommendationText").textContent = recText;
+
+      const tagWrap = $("recommendTags");
+      tagWrap.innerHTML = "";
+
+      // Always include severity + confidence + action-related tags
+      const severityTag = document.createElement("div");
+      severityTag.className = "tag";
+      severityTag.textContent = `Severity: ${severityLabel(severity)}`;
+      tagWrap.appendChild(severityTag);
+
+      const confTag = document.createElement("div");
+      confTag.className = "tag";
+      confTag.textContent = `Confidence: ${label}`;
+      tagWrap.appendChild(confTag);
+
+      const actionTag = document.createElement("div");
+      actionTag.className = "tag";
+      actionTag.textContent = `Suggested action: ${actionLabel(actionKey)}`;
+      tagWrap.appendChild(actionTag);
+
+      for(const t of (tags || [])){
+        const d = document.createElement("div");
+        d.className = "tag";
+        d.textContent = t;
+        tagWrap.appendChild(d);
+      }
+    }
+
+    function renderHistory(){
+      const items = loadHistory();
+      $("historyCount").textContent = String(items.length);
+
+      const list = $("historyList");
+      list.innerHTML = "";
+
+      if(items.length === 0){
+        list.innerHTML = `
+          <div class="histItem" style="opacity:.95;">
+            <div class="histTop">
+              <div class="histTitle">
+                <strong>No records yet</strong>
+                <span>Store a report to build history.</span>
+              </div>
+              <div class="histMeta">—</div>
+            </div>
+            <div class="histDesc">Tip: click “Fill example”, score, choose a final decision, then store.</div>
+          </div>
+        `;
+        return;
+      }
+
+      // Show newest first
+      for(let i = items.length - 1; i >= 0; i--){
+        const r = items[i];
+        const item = document.createElement("div");
+        item.className = "histItem";
+
+        const dt = r.incidentTimeISO ? formatDateTime(r.incidentTimeISO) : (r.incidentTimeLocal || "");
+        const title = `${r.incidentTypeReadable} @ ${r.locationShort || r.location || "—"}`;
+
+        item.innerHTML = `
+          <div class="histTop">
+            <div class="histTitle">
+              <strong>${escapeHtml(title)}</strong>
+              <span>${escapeHtml(dt)}</span>
+            </div>
+            <div class="histMeta">
+              Score: ${escapeHtml(String(r.score))} <br/>
+              ${escapeHtml(String(r.confidenceLabel))}
+            </div>
+          </div>
+          <div class="histDesc">
+            <div><b>Tool suggestion:</b> ${escapeHtml(actionLabel(r.toolAction))}</div>
+            <div><b>Final decision:</b> ${escapeHtml(actionLabel(r.finalDecision))}</div>
+            <div style="margin-top:6px; color:rgba(233,241,255,.75)">${escapeHtml((r.description || "").slice(0, 240))}${(r.description||"").length > 240 ? "…" : ""}</div>
+          </div>
+        `;
+        list.appendChild(item);
+      }
+    }
+
+    function requireComputed(){
+      if(!lastComputed){
+        $("storeStatus").textContent = "Please run scoring first (click “Score credibility & recommend”).";
+        return false;
+      }
+      return true;
+    }
+
+    function getFinalDecision(){
+      const radios = document.querySelectorAll('input[name="finalDecision"]');
+      for(const r of radios){
+        if(r.checked) return r.value;
+      }
+      return "";
+    }
+
+    // ---------- Buttons ----------
+    $("btnScore").addEventListener("click", () => {
+      const v = validateInputs();
+      const inputs = readInputs();
+
+      // incidentType required for scoring severity:
+      if(!inputs.incidentType){
+        // Still compute credibility; severity will default to low
+      }
+
+      const { score, label, breakdown } = credibilityScoreAndBreakdown(inputs);
+
+      const { action, tags } = recommendAction({
+        credibilityScore: score,
+        confidenceLabel: label,
+        severity: inputs.severity,
+        hasImmediateDanger: inputs.hasImmediateDanger
+      });
+
+      // Update UI
+      setResultUI({
+        score,
+        label,
+        actionKey: action,
+        tags,
+        severity: inputs.severity
+      });
+
+      updateRuleTable([
+        // Add a baseline row for clarity (not in breakdown adjustments)
+        { signal: "Baseline", adjustment: 0, notes: "Score starts at 50, then rules adjust up/down." },
+        ...breakdown
+      ]);
+
+      lastComputed = {
+        computedAtISO: new Date().toISOString(),
+        inputs,
+        score,
+        confidenceLabel: label,
+        toolAction: action,
+        tags
+      };
+
+      $("storeStatus").textContent = v.ok
+        ? "Scoring complete. Select your final decision and store when ready."
+        : "Scoring complete (some inputs missing/weak). Select your final decision and store when ready.";
+    });
+
+    $("btnFillExample").addEventListener("click", () => {
+      // Provide a realistic example; keep it generic.
+      const now = new Date();
+      // round to nearest 5 minutes for nicer display
+      now.setMinutes(Math.floor(now.getMinutes()/5)*5);
+      const pad = (n) => String(n).padStart(2,"0");
+      const local = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+      $("location").value = "Near 5th Ave & Pine St (outside grocery entrance)";
+      $("incidentTime").value = local;
+      $("incidentType").value = "weapon_threat";
+      $("severityHint").value = "auto";
+      $("description").value =
+        "Caller reports a person threatening staff with a possible knife. Caller says it appears ongoing. " +
+        "The caller is unsure about the exact weapon, but believes the threat is credible. " +
+        "No further details provided yet.";
+      $("callerTag").value = "anonymous";
+      $("callerReliability").value = "none";
+      $("consistencySignals").value = "some_discrepancy";
+      $("hasImmediateDanger").value = "yes";
+
+      validateInputs();
+      $("storeStatus").textContent = "Example filled. Click “Score credibility & recommend”.";
+    });
+
+    $("btnReset").addEventListener("click", () => {
+      $("location").value = "";
+      $("incidentTime").value = "";
+      $("incidentType").value = "";
+      $("severityHint").value = "auto";
+      $("description").value = "";
+
+      $("callerTag").value = "unknown";
+      $("callerReliability").value = "none";
+      $("consistencySignals").value = "unknown";
+      $("hasImmediateDanger").value = "no";
+
+      lastComputed = null;
+      $("scoreValue").textContent = "—";
+      $("labelValue").textContent = "—";
+      $("actionValue").textContent = "—";
+      $("confidencePill").textContent = "—";
+      $("recommendationText").textContent = "Enter a report and click “Score credibility & recommend”.";
+      $("recommendTags").innerHTML = "";
+      $("riskBar").style.width = "0%";
+      updateRuleTable([]);
+      $("storeStatus").textContent = "";
+      setValidationStatus(true, "");
+    });
+
+    $("btnStore").addEventListener("click", () => {
+      $("storeStatus").textContent = "";
+
+      if(!requireComputed()) return;
+
+      const finalDecision = getFinalDecision();
+      if(!finalDecision){
+        $("storeStatus").textContent = "Please select your final decision (dispatch immediately / verify / log only) before storing.";
+        return;
+      }
+
+      const h = loadHistory();
+      const c = lastComputed;
+
+      const inputs = c.inputs;
+
+      // Create stored record
+      const record = {
+        recordId: "r_" + Math.random().toString(16).slice(2) + "_" + Date.now(),
+        storedAtISO: new Date().toISOString(),
+
+        // Report fields
+        location: inputs.location,
+        locationShort: inputs.location ? inputs.location.slice(0, 38) : "",
+        incidentTimeISO: inputs.incidentTimeISO || "",
+        incidentTimeLocal: inputs.incidentTimeLocal || "",
+        incidentType: inputs.incidentType,
+        incidentTypeReadable: incidentTypeReadable(inputs.incidentType),
+        description: inputs.description,
+
+        // Caller/triage signals
+        callerTag: inputs.callerTag,
+        callerReliability: inputs.callerReliability,
+        consistencySignals: inputs.consistencySignals,
+        hasImmediateDanger: inputs.hasImmediateDanger,
+        severity: inputs.severity,
+
+        // Tool outputs
+        score: c.score,
+        confidenceLabel: c.confidenceLabel,
+        toolAction: c.toolAction,
+
+        // User decision
+        finalDecision,
+
+        // Optional trace
+        computedAtISO: c.computedAtISO
+      };
+
+      h.push(record);
+      saveHistory(h);
+      renderHistory();
+
+      $("storeStatus").textContent = "Stored. Record saved locally in this browser.";
+
+      // Optional: keep lastComputed; user can store multiple decisions
+    });
+
+    $("btnClearHistory").addEventListener("click", () => {
+      const ok = confirm("Clear stored history in this browser? This cannot be undone.");
+      if(!ok) return;
+      localStorage.removeItem(STORAGE_KEY);
+      lastComputed = null;
+      renderHistory();
+
+      $("scoreValue").textContent = "—";
+      $("labelValue").textContent = "—";
+      $("actionValue").textContent = "—";
+      $("confidencePill").textContent = "—";
+      $("recommendationText").textContent = "Enter a report and click “Score credibility & recommend”.";
+      $("recommendTags").innerHTML = "";
+      $("riskBar").style.width = "0%";
+      updateRuleTable([]);
+      $("storeStatus").textContent = "History cleared.";
+    });
+
+    function incidentTypeReadable(key){
+      switch(key){
+        case "violent_assault": return "Violent assault / fight";
+        case "weapon_threat": return "Weapon threat";
+        case "domestic": return "Domestic disturbance";
+        case "robbery": return "Robbery";
+        case "suspicious_activity": return "Suspicious activity";
+        case "theft": return "Theft / property crime";
+        case "medical_emergency": return "Medical emergency";
+        case "disturbance": return "Loud disturbance / disturbance";
+        case "other": return "Other";
+        case "": return "—";
+        default: return key;
+      }
+    }
+
+    // ---------- Init ----------
+    (function init(){
+      // Set min time to now (optional but harmless). Keep simple:
+      // If browser doesn't support datetime-local, it's still fine.
+      const now = new Date();
+      // Pre-fill incidentTime with now rounded to 5 minutes (optional convenience).
+      now.setMinutes(Math.floor(now.getMinutes()/5)*5);
+      const pad = (n) => String(n).padStart(2,"0");
+      const local = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      $("incidentTime").value = local;
+
+      renderHistory();
+      setValidationStatus(true, "");
+    })();
+  </script>
+</body>
+</html>

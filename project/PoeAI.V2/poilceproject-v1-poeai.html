@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Decision Support Tool for Local Law Enforcement</title>
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; padding: 0; background: #f3f4f6; color: #111827; }
+    .app-container { max-width: 1100px; margin: 0 auto; padding: 24px 16px 40px; }
+    h1, h2, h3 { margin: 0 0 8px; font-weight: 600; color: #111827; }
+    p { margin: 0 0 8px; color: #4b5563; font-size: 14px; }
+    .subtitle { margin-bottom: 16px; font-size: 13px; color: #6b7280; }
+
+    .layout { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+    @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+    .card { background: #ffffff; border-radius: 8px; padding: 16px 18px 18px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08); border: 1px solid #e5e7eb; }
+    .card-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+
+    .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 500; letter-spacing: 0.02em; }
+    .badge-mvp { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .badge-live { background: #ecfdf3; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-muted { background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; }
+
+    form { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 8px; }
+    .field-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 13px; font-weight: 500; color: #374151; }
+    .label-hint { font-size: 11px; color: #9ca3af; }
+
+    input[type="text"], input[type="datetime-local"], select, textarea {
+      border-radius: 6px; border: 1px solid #d1d5db; padding: 7px 9px; font-size: 13px; outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease; background: #f9fafb;
+    }
+    input[type="text"]:focus, input[type="datetime-local"]:focus, select:focus, textarea:focus {
+      border-color: #2563eb; box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.25); background: #ffffff;
+    }
+
+    textarea { resize: vertical; min-height: 70px; max-height: 200px; }
+    .checkbox-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 4px; }
+    .checkbox-item { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #4b5563; }
+    .checkbox-item input { margin: 0; }
+
+    .form-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; gap: 8px; flex-wrap: wrap; }
+    .helper-text { font-size: 11px; color: #9ca3af; }
+    .error-text { font-size: 12px; color: #b91c1c; margin-top: 4px; }
+
+    .btn {
+      border-radius: 999px; border: none; padding: 7px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+      white-space: nowrap;
+    }
+    .btn-primary { background: #1d4ed8; color: #ffffff; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25); }
+    .btn-primary:hover { background: #1e40af; transform: translateY(-0.5px); box-shadow: 0 2px 4px rgba(15, 23, 42, 0.25); }
+
+    .btn-secondary { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+    .btn-secondary:hover { background: #e5e7eb; }
+    .btn-small { padding: 4px 10px; font-size: 11px; }
+
+    .output-section { margin-top: 8px; display: grid; grid-template-columns: 1.1fr 1.1fr; gap: 10px; }
+    @media (max-width: 700px) { .output-section { grid-template-columns: 1fr; } }
+
+    .output-block { border-radius: 8px; padding: 10px 12px; background: #f9fafb; border: 1px solid #e5e7eb; }
+    .output-title { font-size: 12px; font-weight: 600; color: #4b5563; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .output-value { font-size: 22px; font-weight: 600; color: #111827; }
+    .output-subvalue { font-size: 13px; color: #4b5563; margin-top: 2px; }
+
+    .confidence-low { color: #b91c1c; }
+    .confidence-medium { color: #b45309; }
+    .confidence-high { color: #15803d; }
+
+    .recommendation-pill { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; }
+    .rec-dispatch { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+    .rec-verify { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .rec-log { background: #e5e7eb; color: #374151; border: 1px solid #d1d5db; }
+
+    .output-note { font-size: 11px; color: #6b7280; margin-top: 6px; }
+
+    .records-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; gap: 8px; flex-wrap: wrap; }
+    .records-meta { font-size: 11px; color: #9ca3af; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+    th, td { padding: 6px 6px; text-align: left; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; background: #f9fafb; }
+    tr:nth-child(even) td { background: #f9fafb; }
+
+    .tag { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 999px; font-size: 10px; font-weight: 500; margin-right: 4px; margin-top: 2px; }
+    .tag-anon { background: #fee2e2; color: #b91c1c; }
+    .tag-repeat { background: #e0f2fe; color: #0369a1; }
+    .tag-known { background: #dcfce7; color: #166534; }
+    .tag-other { background: #e5e7eb; color: #374151; }
+
+    .pill-small { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 999px; font-size: 10px; font-weight: 500; }
+    .pill-low { background: #fee2e2; color: #b91c1c; }
+    .pill-medium { background: #fef3c7; color: #92400e; }
+    .pill-high { background: #dcfce7; color: #166534; }
+    .pill-rec-dispatch { background: #fee2e2; color: #b91c1c; }
+    .pill-rec-verify { background: #fef3c7; color: #92400e; }
+    .pill-rec-log { background: #e5e7eb; color: #374151; }
+
+    .no-records { font-size: 12px; color: #9ca3af; padding: 6px 0; }
+
+    .divider { height: 1px; background: #e5e7eb; margin: 10px 0; }
+    .pill-decision { background: #eff6ff; color: #1d4ed8; border-radius: 999px; padding: 2px 8px; font-size: 10px; font-weight: 500; display: inline-flex; align-items: center; gap: 4px; }
+    .pill-decision span { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7280; }
+
+    .muted { color: #9ca3af; }
+    .text-strong { font-weight: 600; }
+
+    .workflow-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 11px; color: #6b7280; }
+
+    /* Notification inbox */
+    .inbox { margin-top: 10px; border-radius: 8px; background: #f9fafb; border: 1px solid #e5e7eb; padding: 10px; }
+    .inbox-header { display:flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .inbox-title { font-size: 12px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.04em; }
+    .inbox-list { margin-top: 8px; display: grid; gap: 8px; }
+    .inbox-item { background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; }
+    .inbox-item .top { display:flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    .inbox-item .msg { color:#374151; font-size: 12px; margin-top: 4px; }
+    .inbox-item .time { color:#6b7280; font-size: 11px; white-space: nowrap; }
+    .inbox-actions { margin-top: 10px; display:flex; justify-content: flex-end; }
+    .small-link { cursor: pointer; font-size: 11px; color:#1d4ed8; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header style="margin-bottom: 16px;">
+      <div class="card-header">
+        <div>
+          <h1>Decision Support Tool</h1>
+          <p class="subtitle">
+            Lightweight, rule-based support for 911 dispatchers and supervisors. Tool assists—final judgment remains with the human.
+          </p>
+        </div>
+        <span class="badge badge-mvp">MVP • Local Law Enforcement</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <!-- LEFT -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>Report intake</h2>
+            <p class="subtitle">Step 1–3: Enter details, run rule-based scoring, review recommendation.</p>
+          </div>
+        </div>
+
+        <form id="reportForm">
+          <div class="field-group">
+            <label for="location">Location <span class="label-hint">(address, intersection, or landmark)</span></label>
+            <input type="text" id="location" name="location" placeholder="e.g., 1200 Main St, near City Park" required />
+          </div>
+
+          <div class="field-group">
+            <label for="time">Time of incident <span class="label-hint">(approximate is acceptable)</span></label>
+            <input type="datetime-local" id="time" name="time" />
+          </div>
+
+          <div class="field-group">
+            <label for="incidentType">Type of incident</label>
+            <select id="incidentType" name="incidentType" required>
+              <option value="">Select type...</option>
+              <option value="violent">Violent crime / immediate danger</option>
+              <option value="property">Property crime / theft / vandalism</option>
+              <option value="disturbance">Disturbance / noise / dispute</option>
+              <option value="traffic">Traffic / collision / hazard</option>
+              <option value="suspicious">Suspicious activity</option>
+              <option value="other">Other / unclear</option>
+            </select>
+          </div>
+
+          <div class="field-group">
+            <label for="callerId">Caller identifier <span class="label-hint">(optional)</span></label>
+            <input type="text" id="callerId" name="callerId" placeholder="Name, phone, or internal ID (leave blank if anonymous)" />
+            <div class="checkbox-row">
+              <label class="checkbox-item">
+                <input type="checkbox" id="tagAnonymous" />
+                Anonymous caller
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="tagRepeatCaller" />
+                Repeat caller / prior reports
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="tagKnownReliable" />
+                Known reliable caller
+              </label>
+            </div>
+          </div>
+
+          <div class="field-group">
+            <label for="description">Description of incident</label>
+            <textarea id="description" name="description" placeholder="Key details: who, what, where, weapons, injuries, vehicles, etc." required></textarea>
+          </div>
+
+          <div class="field-group">
+            <label for="dispatcherDecision">Dispatcher decision <span class="label-hint">(after reviewing recommendation)</span></label>
+            <select id="dispatcherDecision" name="dispatcherDecision">
+              <option value="">Select decision...</option>
+              <option value="dispatch">Dispatch units</option>
+              <option value="hold_verify">Hold / verify details</option>
+              <option value="log_only">Log only / no dispatch</option>
+            </select>
+          </div>
+
+          <div class="form-footer">
+            <div>
+              <button type="submit" class="btn btn-primary">Run scoring & save record</button>
+            </div>
+            <div class="helper-text">
+              Inputs are validated and scored using simple rules. No external databases or automation are used.
+            </div>
+          </div>
+
+          <div id="formError" class="error-text" style="display:none;"></div>
+        </form>
+
+        <div class="divider"></div>
+        <h3 style="font-size: 13px; margin-bottom: 4px;">Decision support output</h3>
+        <p class="subtitle">
+          Step 3–4: Use the score, confidence label, and recommended action as guidance—not as a replacement for judgment.
+        </p>
+
+        <div class="output-section">
+          <div class="output-block">
+            <div class="output-title">Credibility score</div>
+            <div class="output-value" id="scoreDisplay">—</div>
+            <div class="output-subvalue">
+              Confidence: <span id="confidenceLabel" class="muted">Not yet scored</span>
+            </div>
+            <div class="output-note" id="scoreNotes">
+              Once you submit a report, a 1–100 score and Low/Medium/High confidence label will appear here.
+            </div>
+          </div>
+
+          <div class="output-block">
+            <div class="output-title">Recommended action</div>
+            <div id="recommendationPill" class="recommendation-pill rec-log">Awaiting input</div>
+            <div class="output-subvalue" id="recommendationSummary">
+              The tool will combine credibility and incident severity to suggest: Dispatch immediately, Verify before dispatch, or Log only.
+            </div>
+            <div class="output-note">Final decision is recorded separately and can override this recommendation.</div>
+          </div>
+        </div>
+
+        <!-- Workflow controls (applied to each case via row actions below) -->
+        <div class="divider"></div>
+        <h3 style="font-size: 13px; margin-bottom: 4px;">Officer workflow (MVP controls)</h3>
+        <p class="subtitle" style="margin-bottom: 6px;">
+          Select a case in the table to change status, assign, and view audit trail.
+        </p>
+      </section>
+
+      <!-- RIGHT -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <h2>Stored reports / cases</h2>
+            <p class="subtitle">Step 5: Recent reports and decisions (in-memory only; cleared on refresh).</p>
+          </div>
+          <span class="badge badge-muted">Local session</span>
+        </div>
+
+        <div class="records-header">
+          <div class="records-meta" id="recordsMeta">No reports stored yet.</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button id="clearRecordsBtn" class="btn btn-secondary btn-small" type="button">Clear session</button>
+          </div>
+        </div>
+
+        <div class="inbox" aria-live="polite">
+          <div class="inbox-header">
+            <div class="inbox-title">Notification Inbox (simulated)</div>
+            <div class="records-meta" id="inboxMeta">No notifications yet</div>
+          </div>
+          <div class="inbox-list" id="inboxList"></div>
+          <div class="inbox-actions">
+            <span class="small-link" id="clearInboxLink">Clear inbox</span>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto; margin-top: 12px;">
+          <table id="recordsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Time & location</th>
+                <th>Incident & tags</th>
+                <th>Score</th>
+                <th>Recommendation</th>
+                <th>Decision</th>
+                <th>Case workflow</th>
+              </tr>
+            </thead>
+            <tbody id="recordsBody">
+              <tr>
+                <td colspan="7" class="no-records">No cases yet. Submit a report to see it logged here.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="divider"></div>
+        <h3 style="font-size: 13px; margin-bottom: 4px;">Audit log (latest events)</h3>
+        <p class="subtitle" style="margin-bottom: 6px;">Every create/status/assignment action is recorded below.</p>
+        <div class="mono" id="auditLogPreview" style="max-height: 220px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px; padding:10px; background:#f9fafb;">
+          No audit events yet.
+        </div>
+
+        <p class="helper-text" style="margin-top: 10px;">
+          Note: This MVP stores data in memory only. In production, audit logs should be persisted on the backend with strict access controls.
+        </p>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // In-memory storage for cases + audit logs + notifications
+    // ============================================================
+    const cases = [];
+    const auditLog = [];
+    const notifications = []; // displayed in inbox
+
+    // ============================================================
+    // MVP user/assignment model (simulated)
+    // ============================================================
+    // In a real system: use authenticated users and permissions.
+    const POLICE_USERS = [
+      { id: "u-dispatch-1", name: "Dispatch A" },
+      { id: "u-super-1", name: "Supervisor 1" },
+      { id: "u-officer-1", name: "Officer 101" },
+      { id: "u-officer-2", name: "Officer 102" },
+      { id: "u-officer-3", name: "Officer 103" }
+    ];
+
+    // "actor" for this session (simulated)
+    const SESSION_ACTOR = { id: "u-dispatch-1", name: "Dispatch A" };
+
+    function nowIso() { return new Date().toISOString(); }
+    function nowDisplay() { return new Date().toLocaleString(); }
+    function getUser(userId) { return POLICE_USERS.find(u => u.id === userId) || null; }
+
+    function uid(prefix="id") {
+      return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+    }
+
+    // ============================================================
+    // Full audit logs helper
+    // ============================================================
+    function writeAuditLog({ actorId, actorName, actionType, entityType, entityId, before, after, meta={} }) {
+      auditLog.push({
+        id: uid("audit"),
+        actorId,
+        actorName,
+        actionType,
+        entityType,
+        entityId,
+        before: before ? JSON.stringify(before).slice(0, 2000) : "",
+        after: after ? JSON.stringify(after).slice(0, 2000) : "",
+        meta,
+        createdAt: nowIso(),
+      });
+      renderAuditLogPreview();
+    }
+
+    // ============================================================
+    // Status workflow (enforced transitions)
+    // ============================================================
+    const CASE_STATUS = {
+      REPORTED: "REPORTED",
+      ASSIGNED: "ASSIGNED",
+      IN_PROGRESS: "IN_PROGRESS",
+      ON_HOLD: "ON_HOLD",
+      CLEARED: "CLEARED"
+    };
+
+    // Allowed transitions:
+    // REPORTED -> ASSIGNED | ON_HOLD
+    // ASSIGNED -> IN_PROGRESS | ON_HOLD
+    // IN_PROGRESS -> ON_HOLD | CLEARED
+    // ON_HOLD -> ASSIGNED | CLEARED
+    const ALLOWED_TRANSITIONS = new Map([
+      [CASE_STATUS.REPORTED, new Set([CASE_STATUS.ASSIGNED, CASE_STATUS.ON_HOLD])],
+      [CASE_STATUS.ASSIGNED, new Set([CASE_STATUS.IN_PROGRESS, CASE_STATUS.ON_HOLD])],
+      [CASE_STATUS.IN_PROGRESS, new Set([CASE_STATUS.ON_HOLD, CASE_STATUS.CLEARED])],
+      [CASE_STATUS.ON_HOLD, new Set([CASE_STATUS.ASSIGNED, CASE_STATUS.CLEARED])]
+    ]);
+
+    function canTransition(from, to) {
+      if (!from) return false;
+      const set = ALLOWED_TRANSITIONS.get(from);
+      return set ? set.has(to) : false;
+    }
+
+    // ============================================================
+    // Case management objects
+    // - cases[] is the store
+    // - each case has a timeline of events
+    // ============================================================
+    function addCaseEvent(caseObj, { eventType, actor, detail }) {
+      caseObj.timeline.push({
+        id: uid("evt"),
+        eventType,
+        actor: { id: actor.id, name: actor.name },
+        detail: detail || {},
+        at: nowIso()
+      });
+    }
+
+    function statusPillClass(status) {
+      switch(status) {
+        case CASE_STATUS.REPORTED: return "pill-low";
+        case CASE_STATUS.ASSIGNED: return "pill-medium";
+        case CASE_STATUS.IN_PROGRESS: return "pill-high";
+        case CASE_STATUS.ON_HOLD: return "pill-medium";
+        case CASE_STATUS.CLEARED: return "pill-rec-log";
+        default: return "";
+      }
+    }
+
+    function statusLabel(status) {
+      switch(status) {
+        case CASE_STATUS.REPORTED: return "Reported";
+        case CASE_STATUS.ASSIGNED: return "Assigned";
+        case CASE_STATUS.IN_PROGRESS: return "In progress";
+        case CASE_STATUS.ON_HOLD: return "On hold";
+        case CASE_STATUS.CLEARED: return "Cleared";
+        default: return status;
+      }
+    }
+
+    // ============================================================
+    // Notifications (simulated)
+    // ============================================================
+    function pushNotification({ toUserId, title, message, relatedCaseId }) {
+      notifications.push({
+        id: uid("notif"),
+        toUserId,
+        toUserName: getUser(toUserId)?.name || "Unknown",
+        title,
+        message,
+        relatedCaseId,
+        createdAt: nowIso()
+      });
+      renderInbox();
+      writeAuditLog({
+        actorId: SESSION_ACTOR.id,
+        actorName: SESSION_ACTOR.name,
+        actionType: "NOTIFICATION_SENT",
+        entityType: "case",
+        entityId: relatedCaseId,
+        before: null,
+        after: { toUserId, title, message }
+      });
+    }
+
+    function renderInbox() {
+      const inboxMeta = document.getElementById("inboxMeta");
+      const inboxList = document.getElementById("inboxList");
+      inboxList.innerHTML = "";
+
+      // In this MVP, show notifications to the "actor"
+      const visible = notifications
+        .slice()
+        .reverse()
+        .filter(n => n.toUserId === SESSION_ACTOR.id);
+
+      inboxMeta.textContent = visible.length ? `${visible.length} notification${visible.length !== 1 ? "s" : ""}` : "No notifications yet";
+
+      if (visible.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "no-records";
+        empty.textContent = "No notifications for your account in this session.";
+        inboxList.appendChild(empty);
+        return;
+      }
+
+      visible.slice(0, 10).forEach(n => {
+        const item = document.createElement("div");
+        item.className = "inbox-item";
+        item.innerHTML = `
+          <div class="top">
+            <div class="text-strong" style="font-size:12px;">${escapeHtml(n.title)}</div>
+            <div class="time">${escapeHtml(new Date(n.createdAt).toLocaleTimeString())}</div>
+          </div>
+          <div class="msg">${escapeHtml(n.message)}</div>
+        `;
+        inboxList.appendChild(item);
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+      }[s]));
+    }
+
+    // ============================================================
+    // Utility: Basic rule-based credibility scoring (unchanged)
+    // ============================================================
+    function computeCredibilityScore({ callerId, isAnonymous, isRepeatCaller, isKnownReliable, description }) {
+      let score = 50;
+      if (isKnownReliable) score += 25;
+      else if (callerId && !isAnonymous) score += 10;
+      if (isAnonymous && !callerId) score -= 15;
+      if (isRepeatCaller) score -= 5;
+
+      const desc = (description || "").trim();
+      const wordCount = desc ? desc.split(/\s+/).length : 0;
+
+      if (wordCount < 5) score -= 15;
+      else if (wordCount < 15) score -= 5;
+      else if (wordCount > 30) score += 5;
+
+      const lowerDesc = desc.toLowerCase();
+      const strongKeywords = ["weapon", "gun", "knife", "shots", "shooting", "explosion", "hostage"];
+      const moderateKeywords = ["injured", "bleeding", "screaming", "fight", "threat", "breaking in"];
+
+      if (strongKeywords.some(k => lowerDesc.includes(k))) score += 10;
+      else if (moderateKeywords.some(k => lowerDesc.includes(k))) score += 5;
+
+      score = Math.max(1, Math.min(100, score));
+
+      let label = "Medium";
+      if (score < 40) label = "Low";
+      else if (score > 70) label = "High";
+
+      return { score, label };
+    }
+
+    function computeSeverity(incidentType) {
+      switch (incidentType) {
+        case "violent": return 3;
+        case "property":
+        case "traffic":
+        case "disturbance": return 2;
+        case "suspicious":
+        case "other":
+        default: return 1;
+      }
+    }
+
+    function computeRecommendation(score, confidenceLabel, severity) {
+      const isHighCred = score > 70 || confidenceLabel === "High";
+      const isLowCred = score < 40 || confidenceLabel === "Low";
+
+      let recommendation = "Verify before dispatch";
+
+      if (severity === 3 && (isHighCred || score >= 60)) {
+        recommendation = "Dispatch immediately";
+      } else if (severity === 1 && isLowCred) {
+        recommendation = "Log only";
+      } else if (severity === 2 && isLowCred) {
+        recommendation = "Verify before dispatch";
+      }
+
+      return recommendation;
+    }
+
+    function updateOutputPanel({ score, confidenceLabel, recommendation }) {
+      const scoreDisplay = document.getElementById("scoreDisplay");
+      const confidenceLabelEl = document.getElementById("confidenceLabel");
+      const scoreNotes = document.getElementById("scoreNotes");
+      const recommendationPill = document.getElementById("recommendationPill");
+      const recommendationSummary = document.getElementById("recommendationSummary");
+
+      scoreDisplay.textContent = score;
+      confidenceLabelEl.textContent = confidenceLabel + " confidence";
+
+      confidenceLabelEl.classList.remove("confidence-low", "confidence-medium", "confidence-high", "muted");
+      if (confidenceLabel === "Low") confidenceLabelEl.classList.add("confidence-low");
+      else if (confidenceLabel === "Medium") confidenceLabelEl.classList.add("confidence-medium");
+      else confidenceLabelEl.classList.add("confidence-high");
+
+      scoreNotes.textContent =
+        "Score is based on caller identity, description detail, and simple keyword checks. It is a guide, not a verdict.";
+
+      recommendationPill.textContent = recommendation;
+      recommendationPill.classList.remove("rec-dispatch", "rec-verify", "rec-log");
+
+      if (recommendation === "Dispatch immediately") {
+        recommendationPill.classList.add("rec-dispatch");
+        recommendationSummary.textContent =
+          "High-severity and credible: strongly consider immediate dispatch while following local protocols.";
+      } else if (recommendation === "Verify before dispatch") {
+        recommendationPill.classList.add("rec-verify");
+        recommendationSummary.textContent =
+          "Some uncertainty or moderate severity: consider clarifying key details before committing resources.";
+      } else {
+        recommendationPill.classList.add("rec-log");
+        recommendationSummary.textContent =
+          "Low severity and low credibility: logging may be sufficient unless additional information emerges.";
+      }
+    }
+
+    // ============================================================
+    // UI Helpers: Render audit log preview
+    // ============================================================
+    function renderAuditLogPreview() {
+      const el = document.getElementById("auditLogPreview");
+      const latest = auditLog.slice().reverse().slice(0, 12);
+      if (latest.length === 0) {
+        el.textContent = "No audit events yet.";
+        return;
+      }
+      el.innerHTML = latest.map(a => {
+        const time = new Date(a.createdAt).toLocaleString();
+        const beforeShort = a.before ? a.before : "";
+        const afterShort = a.after ? a.after : "";
+        return `
+          <div style="padding:6px 0; border-bottom:1px solid #e5e7eb;">
+            <div class="text-strong">${escapeHtml(a.actionType)} • ${escapeHtml(a.entityType)}:${escapeHtml(a.entityId)}</div>
+            <div>${escapeHtml(time)} • Actor: ${escapeHtml(a.actorName)}</div>
+            ${beforeShort ? `<div>Before: ${escapeHtml(beforeShort.slice(0,220))}${beforeShort.length>220?'…':''}</div>` : ''}
+            ${afterShort ? `<div>After: ${escapeHtml(afterShort.slice(0,220))}${afterShort.length>220?'…':''}</div>` : ''}
+          </div>
+        `;
+      }).join("");
+    }
+
+    // ============================================================
+    // UI Helpers: Render stored cases table
+    // ============================================================
+    function renderCasesTable() {
+      const tbody = document.getElementById("recordsBody");
+      const meta = document.getElementById("recordsMeta");
+      tbody.innerHTML = "";
+
+      if (cases.length === 0) {
+        const row = document.createElement("tr");
+        const cell = document.createElement("td");
+        cell.colSpan = 7;
+        cell.className = "no-records";
+        cell.textContent = "No cases yet. Submit a report to see it logged here.";
+        row.appendChild(cell);
+        tbody.appendChild(row);
+        meta.textContent = "No reports stored yet.";
+        return;
+      }
+
+      meta.textContent = `${cases.length} case${cases.length !== 1 ? "s" : ""} in this session.`;
+
+      // newest first
+      cases.slice().reverse().forEach((c) => {
+        const row = document.createElement("tr");
+
+        // # index
+        const cellIndex = document.createElement("td");
+        cellIndex.textContent = cases.length; // consistent with "newest first" but simple
+        row.appendChild(cellIndex);
+
+        // Time & location
+        const cellTimeLoc = document.createElement("td");
+        const timeLine = document.createElement("div");
+        timeLine.className = "muted";
+        timeLine.style.fontSize = "11px";
+        timeLine.textContent = c.timeDisplay || "Time not provided";
+        const locLine = document.createElement("div");
+        locLine.textContent = c.location || "Location not provided";
+        cellTimeLoc.appendChild(locLine);
+        cellTimeLoc.appendChild(timeLine);
+        row.appendChild(cellTimeLoc);
+
+        // Incident & tags
+        const cellIncident = document.createElement("td");
+        const incidentLine = document.createElement("div");
+        incidentLine.textContent = c.incidentTypeLabel;
+        incidentLine.style.fontWeight = "600";
+        incidentLine.style.fontSize = "11px";
+
+        const tagsLine = document.createElement("div");
+
+        if (c.isAnonymous) {
+          const t = document.createElement("span");
+          t.className = "tag tag-anon";
+          t.textContent = "Anonymous";
+          tagsLine.appendChild(t);
+        }
+        if (c.isRepeatCaller) {
+          const t = document.createElement("span");
+          t.className = "tag tag-repeat";
+          t.textContent = "Repeat caller";
+          tagsLine.appendChild(t);
+        }
+        if (c.isKnownReliable) {
+          const t = document.createElement("span");
+          t.className = "tag tag-known";
+          t.textContent = "Known reliable";
+          tagsLine.appendChild(t);
+        }
+        if (c.callerId && !c.isAnonymous) {
+          const t = document.createElement("span");
+          t.className = "tag tag-other";
+          t.textContent = "ID: " + c.callerId;
+          tagsLine.appendChild(t);
+        }
+        if (!tagsLine.hasChildNodes()) {
+          const t = document.createElement("span");
+          t.className = "tag tag-other";
+          t.textContent = "No tags";
+          tagsLine.appendChild(t);
+        }
+
+        cellIncident.appendChild(incidentLine);
+        cellIncident.appendChild(tagsLine);
+        row.appendChild(cellIncident);
+
+        // Score
+        const cellScore = document.createElement("td");
+        const scoreLine = document.createElement("div");
+        scoreLine.textContent = c.score;
+        scoreLine.style.fontWeight = "600";
+        const confPill = document.createElement("div");
+        confPill.className = "pill-small " +
+          (c.confidenceLabel === "Low"
+            ? "pill-low"
+            : c.confidenceLabel === "High"
+            ? "pill-high"
+            : "pill-medium");
+        confPill.textContent = c.confidenceLabel + " confidence";
+        cellScore.appendChild(scoreLine);
+        cellScore.appendChild(confPill);
+        row.appendChild(cellScore);
+
+        // Recommendation
+        const cellRec = document.createElement("td");
+        const recPill = document.createElement("div");
+        recPill.className = "pill-small " +
+          (c.recommendation === "Dispatch immediately"
+            ? "pill-rec-dispatch"
+            : c.recommendation === "Verify before dispatch"
+            ? "pill-rec-verify"
+            : "pill-rec-log");
+        recPill.textContent = c.recommendation;
+        cellRec.appendChild(recPill);
+        row.appendChild(cellRec);
+
+        // Dispatcher decision
+        const cellDecision = document.createElement("td");
+        if (c.dispatcherDecisionLabel) {
+          const pill = document.createElement("div");
+          pill.className = "pill-decision";
+          pill.innerHTML = `<span>DECISION</span>${escapeHtml(c.dispatcherDecisionLabel)}`;
+          cellDecision.appendChild(pill);
+        } else {
+          const decisionText = document.createElement("div");
+          decisionText.classList.add("muted");
+          decisionText.textContent = "Not recorded";
+          cellDecision.appendChild(decisionText);
+        }
+        row.appendChild(cellDecision);
+
+        // Case workflow + actions
+        const cellWorkflow = document.createElement("td");
+        cellWorkflow.style.minWidth = "320px";
+
+        const statusPill = document.createElement("div");
+        statusPill.className = "pill-small " + statusPillClass(c.status);
+        statusPill.textContent = statusLabel(c.status);
+
+        const assignedLine = document.createElement("div");
+        assignedLine.style.fontSize = "11px";
+        assignedLine.style.marginTop = "6px";
+        const assignedName = c.assignedToUserId ? (getUser(c.assignedToUserId)?.name || c.assignedToUserId) : "Unassigned";
+        assignedLine.innerHTML = `<span class="muted">Assigned:</span> <span class="text-strong">${escapeHtml(assignedName)}</span>`;
+
+        const actionsDiv = document.createElement("div");
+        actionsDiv.className = "workflow-row";
+
+        // Status dropdown
+        const statusSelect = document.createElement("select");
+        statusSelect.style.minWidth = "160px";
+        statusSelect.innerHTML = `
+          <option value="">Set status…</option>
+          <option value="${CASE_STATUS.REPORTED}">Reported</option>
+          <option value="${CASE_STATUS.ASSIGNED}">Assigned</option>
+          <option value="${CASE_STATUS.IN_PROGRESS}">In progress</option>
+          <option value="${CASE_STATUS.ON_HOLD}">On hold</option>
+          <option value="${CASE_STATUS.CLEARED}">Cleared</option>
+        `;
+        statusSelect.value = "";
+
+        const statusBtn = document.createElement("button");
+        statusBtn.className = "btn btn-secondary btn-small";
+        statusBtn.type = "button";
+        statusBtn.textContent = "Apply";
+
+        statusBtn.addEventListener("click", () => {
+          const to = statusSelect.value;
+          if (!to) return;
+
+          const from = c.status;
+          if (!canTransition(from, to)) {
+            alert(`Invalid workflow transition: ${statusLabel(from)} → ${statusLabel(to)}.`);
+            return;
+          }
+
+          const before = { status: c.status };
+          c.status = to;
+
+          addCaseEvent(c, {
+            eventType: "STATUS_CHANGED",
+            actor: SESSION_ACTOR,
+            detail: { from, to }
+          });
+
+          writeAuditLog({
+            actorId: SESSION_ACTOR.id,
+            actorName: SESSION_ACTOR.name,
+            actionType: "STATUS_CHANGED",
+            entityType: "case",
+            entityId: c.id,
+            before,
+            after: { status: c.status }
+          });
+
+          // notifications on key transitions (optional)
+          if (to === CASE_STATUS.CLEARED) {
+            if (c.assignedToUserId) {
+              pushNotification({
+                toUserId: c.assignedToUserId,
+                title: "Case cleared",
+                message: `Case ${c.caseNumber} moved to Cleared.`,
+                relatedCaseId: c.id
+              });
+            }
+          }
+
+          renderCasesTable();
+        });
+
+        // Assignment dropdown
+        const assignSelect = document.createElement("select");
+        assignSelect.style.minWidth = "160px";
+        assignSelect.innerHTML = `
+          <option value="">Assign to officer…</option>
+          ${POLICE_USERS
+            .filter(u => u.id.startsWith("u-officer"))
+            .map(u => `<option value="${u.id}">${escapeHtml(u.name)}</option>`)
+            .join("")}
+        `;
+
+        const assignBtn = document.createElement("button");
+        assignBtn.className = "btn btn-primary btn-small";
+        assignBtn.type = "button";
+        assignBtn.textContent = "Assign";
+
+        assignBtn.addEventListener("click", () => {
+          const toUserId = assignSelect.value;
+          if (!toUserId) return;
+
+          const before = { assignedToUserId: c.assignedToUserId, status: c.status };
+          c.assignedToUserId = toUserId;
+
+          // move workflow to ASSIGNED if reasonable
+          // (We'll try to transition; if not allowed, we still set assignee but keep status unchanged.)
+          let transitioned = false;
+          if (canTransition(c.status, CASE_STATUS.ASSIGNED)) {
+            const fromStatus = c.status;
+            c.status = CASE_STATUS.ASSIGNED;
+            transitioned = true;
+            addCaseEvent(c, { eventType: "WORKFLOW_AUTOMATED_TO_ASSIGNED", actor: SESSION_ACTOR, detail: { fromStatus, toStatus: CASE_STATUS.ASSIGNED } });
+          }
+
+          // add assignment event/timeline
+          addCaseEvent(c, {
+            eventType: "ASSIGNED",
+            actor: SESSION_ACTOR,
+            detail: { assignedToUserId: toUserId, transitioned }
+          });
+
+          // store assignment record in the case object (simple MVP)
+          c.assignments.push({
+            id: uid("assign"),
+            assignedToUserId: toUserId,
+            assignedByUserId: SESSION_ACTOR.id,
+            assignedAt: nowIso(),
+            notes: "Assigned from MVP workflow control"
+          });
+
+          writeAuditLog({
+            actorId: SESSION_ACTOR.id,
+            actorName: SESSION_ACTOR.name,
+            actionType: "ASSIGNMENT_CREATED",
+            entityType: "case",
+            entityId: c.id,
+            before,
+            after: { assignedToUserId: c.assignedToUserId, status: c.status }
+          });
+
+          // notifications (to assignee)
+          pushNotification({
+            toUserId: toUserId,
+            title: "New case assigned",
+            message: `Case ${c.caseNumber} assigned to you. Status: ${statusLabel(c.status)}.`,
+            relatedCaseId: c.id
+          });
+
+          renderCasesTable();
+        });
+
+        // Clear status/timeline for debugging isn't included; this is audit-friendly.
+
+        actionsDiv.appendChild(statusSelect);
+        actionsDiv.appendChild(statusBtn);
+        actionsDiv.appendChild(assignSelect);
+        actionsDiv.appendChild(assignBtn);
+
+        cellWorkflow.appendChild(statusPill);
+        cellWorkflow.appendChild(assignedLine);
+        cellWorkflow.appendChild(actionsDiv);
+
+        // Optional: show last timeline event
+        const lastEvt = c.timeline[c.timeline.length - 1];
+        const lastEvtLine = document.createElement("div");
+        lastEvtLine.style.fontSize = "11px";
+        lastEvtLine.style.marginTop = "6px";
+        lastEvtLine.className = "muted";
+        lastEvtLine.innerHTML = lastEvt
+          ? `Latest: <span class="text-strong">${escapeHtml(lastEvt.eventType)}</span> • ${escapeHtml(new Date(lastEvt.at).toLocaleTimeString())}`
+          : "Latest: —";
+        cellWorkflow.appendChild(lastEvtLine);
+
+        row.appendChild(cellWorkflow);
+
+        tbody.appendChild(row);
+      });
+    }
+
+    // ============================================================
+    // Form submission -> create CASE + initial audit/event
+    // ============================================================
+    document.getElementById("reportForm").addEventListener("submit", function (event) {
+      event.preventDefault();
+      const errorEl = document.getElementById("formError");
+      errorEl.style.display = "none";
+      errorEl.textContent = "";
+
+      const location = document.getElementById("location").value.trim();
+      const timeValue = document.getElementById("time").value;
+      const incidentType = document.getElementById("incidentType").value;
+      const callerId = document.getElementById("callerId").value.trim();
+      const isAnonymous = document.getElementById("tagAnonymous").checked;
+      const isRepeatCaller = document.getElementById("tagRepeatCaller").checked;
+      const isKnownReliable = document.getElementById("tagKnownReliable").checked;
+      const description = document.getElementById("description").value.trim();
+      const dispatcherDecision = document.getElementById("dispatcherDecision").value;
+
+      if (!location || !incidentType || !description) {
+        errorEl.textContent = "Please provide at least location, incident type, and a brief description.";
+        errorEl.style.display = "block";
+        return;
+      }
+
+      const { score, label: confidenceLabel } = computeCredibilityScore({
+        callerId,
+        isAnonymous,
+        isRepeatCaller,
+        isKnownReliable,
+        description
+      });
+
+      const severity = computeSeverity(incidentType);
+      const recommendation = computeRecommendation(score, confidenceLabel, severity);
+
+      updateOutputPanel({ score, confidenceLabel, recommendation });
+
+      const timeDisplay = timeValue ? new Date(timeValue).toLocaleString() : "";
+
+      const incidentTypeLabelMap = {
+        violent: "Violent / immediate danger",
+        property: "Property crime / theft / vandalism",
+        disturbance: "Disturbance / noise / dispute",
+        traffic: "Traffic / collision / hazard",
+        suspicious: "Suspicious activity",
+        other: "Other / unclear"
+      };
+
+      const dispatcherDecisionLabelMap = {
+        dispatch: "Dispatched units",
+        hold_verify: "Held / verify details",
+        log_only: "Logged only"
+      };
+
+      const recordForCase = {
+        location,
+        timeDisplay,
+        incidentType,
+        incidentTypeLabel: incidentTypeLabelMap[incidentType] || incidentType,
+        callerId,
+        isAnonymous,
+        isRepeatCaller,
+        isKnownReliable,
+        description,
+        score,
+        confidenceLabel,
+        recommendation,
+        dispatcherDecision,
+        dispatcherDecisionLabel: dispatcherDecisionLabelMap[dispatcherDecision] || ""
+      };
+
+      // Determine initial status based on dispatcher decision (simple workflow start)
+      // - dispatch => ASSIGNED (but unassigned officer until assignment)
+      // - hold_verify => ON_HOLD
+      // - log_only => REPORTED (or ON_HOLD); we'll keep REPORTED
+      let initialStatus = CASE_STATUS.REPORTED;
+      if (dispatcherDecision === "dispatch") initialStatus = CASE_STATUS.ASSIGNED;
+      else if (dispatcherDecision === "hold_verify") initialStatus = CASE_STATUS.ON_HOLD;
+      else initialStatus = CASE_STATUS.REPORTED;
+
+      const caseNumber = "CASE-" + String(cases.length + 1).padStart(4, "0");
+
+      const newCase = {
+        id: uid("case"),
+        caseNumber,
+        createdAt: nowIso(),
+        createdBy: { id: SESSION_ACTOR.id, name: SESSION_ACTOR.name },
+
+        // case management fields
+        status: initialStatus,
+        assignedToUserId: null,
+        assignments: [],
+
+        // keep your existing report data
+        ...recordForCase,
+
+        // timeline of case events
+        timeline: [
+          {
+            id: uid("evt"),
+            eventType: "CASE_CREATED",
+            actor: { id: SESSION_ACTOR.id, name: SESSION_ACTOR.name },
+            detail: { initialStatus },
+            at: nowIso()
+          }
+        ]
+      };
+
+      // Save
+      cases.push(newCase);
+
+      // Audit log entry for creation
+      writeAuditLog({
+        actorId: SESSION_ACTOR.id,
+        actorName: SESSION_ACTOR.name,
+        actionType: "CASE_CREATED",
+        entityType: "case",
+        entityId: newCase.id,
+        before: null,
+        after: {
+          caseNumber: newCase.caseNumber,
+          status: newCase.status
+        },
+        meta: { incidentType: newCase.incidentType, severity, recommendation: newCase.recommendation }
+      });
+
+      // Optional notification to dispatch/supervisor (here: dispatch actor)
+      pushNotification({
+        toUserId: SESSION_ACTOR.id,
+        title: "Case created",
+        message: `${newCase.caseNumber} created. Status: ${statusLabel(newCase.status)}.`,
+        relatedCaseId: newCase.id
+      });
+
+      // Render
+      renderCasesTable();
+
+      // keep your previous behavior: table updates; form stays populated in MVP
+    });
+
+    // ============================================================
+    // Clear session
+    // ============================================================
+    document.getElementById("clearRecordsBtn").addEventListener("click", function () {
+      if (!cases.length) return;
+      const confirmed = window.confirm("Clear all stored cases for this session? This cannot be undone.");
+      if (!confirmed) return;
+
+      cases.length = 0;
+      auditLog.length = 0;
+      notifications.length = 0;
+
+      renderCasesTable();
+      renderInbox();
+      renderAuditLogPreview();
+
+      updateOutputPanel({
+        score: "—",
+        confidenceLabel: "Not yet scored",
+        recommendation: "Log only"
+      });
+
+      document.getElementById("scoreNotes").textContent =
+        "Once you submit a report, a 1–100 score and Low/Medium/High confidence label will appear here.";
+    });
+
+    document.getElementById("clearInboxLink").addEventListener("click", function () {
+      notifications.length = 0;
+      renderInbox();
+    });
+
+    // ============================================================
+    // Initial render
+    // ============================================================
+    function initialNeutralOutput() {
+      updateOutputPanel({
+        score: "—",
+        confidenceLabel: "Not yet scored",
+        recommendation: "Log only"
+      });
+      const confidenceLabelEl = document.getElementById("confidenceLabel");
+      confidenceLabelEl.classList.remove("confidence-low", "confidence-medium", "confidence-high");
+      confidenceLabelEl.classList.add("muted");
+      const recommendationPill = document.getElementById("recommendationPill");
+      recommendationPill.textContent = "Awaiting input";
+      recommendationPill.classList.remove("rec-dispatch", "rec-verify", "rec-log");
+      recommendationPill.classList.add("rec-log");
+      document.getElementById("recommendationSummary").textContent =
+        "The tool will combine credibility and incident severity to suggest: Dispatch immediately, Verify before dispatch, or Log only.";
+      document.getElementById("scoreDisplay").textContent = "—";
+    }
+
+    initialNeutralOutput();
+    renderCasesTable();
+    renderInbox();
+    renderAuditLogPreview();
+  </script>
+</body>
+</html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Law Enforcement Decision Support Tool (MVP)</title>
+
+<style>
+/* =========================
+   GENERAL LAYOUT
+========================= */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #f4f6f8;
+    color: #222;
+}
+
+header {
+    background: #1f3b57;
+    color: white;
+    padding: 15px 20px;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    padding: 15px;
+}
+
+/* =========================
+   PANELS
+========================= */
+.panel {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+/* =========================
+   FORM STYLES
+========================= */
+label {
+    font-weight: bold;
+    display: block;
+    margin-top: 10px;
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+button {
+    margin-top: 15px;
+    padding: 10px;
+    width: 100%;
+    background: #1f3b57;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #2d567a;
+}
+
+/* =========================
+   OUTPUT BOX
+========================= */
+.result-box {
+    padding: 10px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+.high { background: #d4edda; }
+.medium { background: #fff3cd; }
+.low { background: #f8d7da; }
+
+/* =========================
+   REPORT LIST
+========================= */
+.report {
+    border-bottom: 1px solid #ddd;
+    padding: 10px 0;
+}
+
+.small {
+    font-size: 12px;
+    color: #555;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h2>Decision Support Tool for Local Law Enforcement (MVP)</h2>
+</header>
+
+<div class="container">
+
+<!-- =========================
+     LEFT: INPUT FORM
+========================= -->
+<div class="panel">
+    <h3>Report Intake</h3>
+
+    <label>Location</label>
+    <input id="location" placeholder="Enter location..." />
+
+    <label>Time</label>
+    <input id="time" type="datetime-local" />
+
+    <label>Incident Type</label>
+    <select id="incidentType">
+        <option value="1">Noise Complaint (Low Severity)</option>
+        <option value="2">Suspicious Activity (Medium)</option>
+        <option value="3">Theft / Burglary (High)</option>
+        <option value="4">Assault / Violence (High)</option>
+        <option value="2">Traffic Incident (Medium)</option>
+    </select>
+
+    <label>Description</label>
+    <textarea id="description" rows="4" placeholder="Enter report details..."></textarea>
+
+    <label>Tags</label>
+    <select id="tags">
+        <option value="none">None</option>
+        <option value="anonymous">Anonymous Caller</option>
+        <option value="repeat">Repeat Caller</option>
+    </select>
+
+    <button onclick="processReport()">Analyze Report</button>
+
+    <div id="output"></div>
+</div>
+
+<!-- =========================
+     RIGHT: REPORT HISTORY
+========================= -->
+<div class="panel">
+    <h3>Stored Reports</h3>
+    <div id="reportList"></div>
+</div>
+
+</div>
+
+<script>
+/* =========================
+   LOAD STORAGE
+========================= */
+let reports = JSON.parse(localStorage.getItem("reports") || "[]");
+
+/* =========================
+   INIT DISPLAY
+========================= */
+renderReports();
+
+/* =========================
+   CORE PROCESSING FUNCTION
+========================= */
+function processReport() {
+
+    const location = document.getElementById("location").value;
+    const time = document.getElementById("time").value;
+    const incidentType = parseInt(document.getElementById("incidentType").value);
+    const description = document.getElementById("description").value;
+    const tags = document.getElementById("tags").value;
+
+    let credibility = 50; // base score
+
+    /* =========================
+       RULE-BASED SCORING
+    ========================= */
+
+    // Missing data penalty
+    if (!location || !time || !description) {
+        credibility -= 15;
+    }
+
+    // Anonymous caller penalty
+    if (tags === "anonymous") {
+        credibility -= 20;
+    }
+
+    // Repeat caller bonus (history proxy)
+    if (tags === "repeat") {
+        credibility += 10;
+    }
+
+    // Description quality check
+    if (description.length > 80) {
+        credibility += 10;
+    } else if (description.length < 20) {
+        credibility -= 10;
+    }
+
+    // Clamp score
+    credibility = Math.max(1, Math.min(100, credibility));
+
+    /* =========================
+       LABELING
+    ========================= */
+    let label = "";
+    if (credibility >= 75) label = "High Confidence";
+    else if (credibility >= 40) label = "Medium Confidence";
+    else label = "Low Confidence";
+
+    /* =========================
+       RECOMMENDATION ENGINE
+    ========================= */
+    let recommendation = "";
+
+    if (incidentType >= 3) { // high severity
+        if (credibility >= 70) {
+            recommendation = "Dispatch immediately";
+        } else {
+            recommendation = "Verify before dispatch";
+        }
+    } else if (incidentType == 2) { // medium
+        recommendation = "Verify before dispatch";
+    } else {
+        recommendation = "Log only";
+    }
+
+    /* =========================
+       OUTPUT UI
+    ========================= */
+    const output = document.getElementById("output");
+
+    output.innerHTML = `
+        <div class="result-box ${credibility >= 75 ? 'high' : credibility >= 40 ? 'medium' : 'low'}">
+            <h4>Analysis Result</h4>
+            <p><strong>Credibility Score:</strong> ${credibility}/100</p>
+            <p><strong>Confidence:</strong> ${label}</p>
+            <p><strong>Recommendation:</strong> ${recommendation}</p>
+        </div>
+    `;
+
+    /* =========================
+       STORE REPORT
+    ========================= */
+    const report = {
+        location,
+        time,
+        incidentType,
+        description,
+        tags,
+        credibility,
+        label,
+        recommendation
+    };
+
+    reports.push(report);
+    localStorage.setItem("reports", JSON.stringify(reports));
+
+    renderReports();
+}
+
+/* =========================
+   RENDER REPORT HISTORY
+========================= */
+function renderReports() {
+    const list = document.getElementById("reportList");
+    list.innerHTML = "";
+
+    reports.slice().reverse().forEach((r, index) => {
+        list.innerHTML += `
+            <div class="report">
+                <strong>${r.location || "Unknown Location"}</strong><br/>
+                <span class="small">${r.time || "No time provided"}</span><br/>
+                <span>Score: ${r.credibility} | ${r.label}</span><br/>
+                <span><strong>Action:</strong> ${r.recommendation}</span><br/>
+                <span class="small">${r.description}</span>
+            </div>
+        `;
+    });
+}
+</script>
+
+</body>
+</html>

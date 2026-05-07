@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Law Enforcement Decision Support Tool (MVP+)</title>
+
+<style>
+/* =========================
+   BASE LAYOUT
+========================= */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #f4f6f8;
+}
+
+header {
+    background: #1f3b57;
+    color: white;
+    padding: 12px 18px;
+}
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 12px;
+}
+
+/* =========================
+   PANELS
+========================= */
+.panel {
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    overflow-y: auto;
+    max-height: 85vh;
+}
+
+/* =========================
+   FORM
+========================= */
+label {
+    font-weight: bold;
+    display: block;
+    margin-top: 8px;
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 6px;
+    margin-top: 4px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+button {
+    margin-top: 10px;
+    padding: 10px;
+    width: 100%;
+    background: #1f3b57;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* =========================
+   CASE CARDS
+========================= */
+.case {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 8px;
+    background: #fafafa;
+}
+
+.small {
+    font-size: 12px;
+    color: #555;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: white;
+}
+
+.new { background: #6c757d; }
+.review { background: #ffc107; color: black; }
+.dispatched { background: #dc3545; }
+.closed { background: #28a745; }
+
+/* =========================
+   AUDIT LOG
+========================= */
+.log {
+    font-size: 12px;
+    border-bottom: 1px solid #eee;
+    padding: 4px 0;
+}
+
+/* =========================
+   TOAST NOTIFICATIONS
+========================= */
+#toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #1f3b57;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 6px;
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h3>Decision Support Tool (Case Management MVP)</h3>
+</header>
+
+<div class="container">
+
+<!-- =========================
+     LEFT: REPORT INPUT
+========================= -->
+<div class="panel">
+    <h4>Report Intake</h4>
+
+    <label>Location</label>
+    <input id="location" />
+
+    <label>Time</label>
+    <input id="time" type="datetime-local" />
+
+    <label>Incident Type</label>
+    <select id="incidentType">
+        <option value="1">Noise Complaint</option>
+        <option value="2">Suspicious Activity</option>
+        <option value="3">Theft / Burglary</option>
+        <option value="4">Violence / Assault</option>
+    </select>
+
+    <label>Description</label>
+    <textarea id="description"></textarea>
+
+    <label>Tag</label>
+    <select id="tags">
+        <option value="none">None</option>
+        <option value="anonymous">Anonymous</option>
+        <option value="repeat">Repeat Caller</option>
+    </select>
+
+    <button onclick="createCase()">Create Case</button>
+
+    <div id="analysis"></div>
+</div>
+
+<!-- =========================
+     MIDDLE: CASE MANAGEMENT
+========================= -->
+<div class="panel">
+    <h4>Active Cases</h4>
+    <div id="cases"></div>
+</div>
+
+<!-- =========================
+     RIGHT: AUDIT LOGS
+========================= -->
+<div class="panel">
+    <h4>Audit Logs</h4>
+    <div id="logs"></div>
+</div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* =========================
+   STORAGE
+========================= */
+let cases = JSON.parse(localStorage.getItem("cases") || "[]");
+let logs = JSON.parse(localStorage.getItem("logs") || "[]");
+
+/* =========================
+   INIT
+========================= */
+renderCases();
+renderLogs();
+
+/* =========================
+   AUDIT LOG FUNCTION
+========================= */
+function logAction(action, details) {
+    const entry = {
+        time: new Date().toLocaleString(),
+        action,
+        details
+    };
+
+    logs.push(entry);
+    localStorage.setItem("logs", JSON.stringify(logs));
+    renderLogs();
+}
+
+/* =========================
+   NOTIFICATIONS (TOAST)
+========================= */
+function notify(msg) {
+    const toast = document.getElementById("toast");
+    toast.innerText = msg;
+    toast.style.display = "block";
+
+    setTimeout(() => {
+        toast.style.display = "none";
+    }, 2500);
+}
+
+/* =========================
+   CASE CREATION + SCORING
+========================= */
+function createCase() {
+
+    const caseObj = {
+        id: Date.now(),
+        location: location.value,
+        time: time.value,
+        incidentType: parseInt(incidentType.value),
+        description: description.value,
+        tags: tags.value,
+        status: "New",
+        assignedTo: "Unassigned",
+        credibility: 50
+    };
+
+    // ===== RULE-BASED SCORING =====
+    if (caseObj.tags === "anonymous") caseObj.credibility -= 20;
+    if (caseObj.tags === "repeat") caseObj.credibility += 10;
+    if (caseObj.description.length < 20) caseObj.credibility -= 10;
+    if (caseObj.description.length > 80) caseObj.credibility += 10;
+
+    caseObj.credibility = Math.max(1, Math.min(100, caseObj.credibility));
+
+    cases.push(caseObj);
+    localStorage.setItem("cases", JSON.stringify(cases));
+
+    logAction("CASE_CREATED", `Case #${caseObj.id} created`);
+
+    notify("New case created");
+
+    renderCases();
+}
+
+/* =========================
+   STATUS WORKFLOW
+========================= */
+function changeStatus(id, status) {
+    const c = cases.find(x => x.id === id);
+    if (!c) return;
+
+    c.status = status;
+
+    logAction("STATUS_CHANGE", `Case #${id} → ${status}`);
+    notify(`Case updated: ${status}`);
+
+    localStorage.setItem("cases", JSON.stringify(cases));
+    renderCases();
+}
+
+/* =========================
+   ASSIGN CASE
+========================= */
+function assignCase(id) {
+    const officer = prompt("Assign to officer:");
+    if (!officer) return;
+
+    const c = cases.find(x => x.id === id);
+    if (!c) return;
+
+    c.assignedTo = officer;
+
+    logAction("ASSIGNMENT", `Case #${id} assigned to ${officer}`);
+    notify("Case assigned");
+
+    localStorage.setItem("cases", JSON.stringify(cases));
+    renderCases();
+}
+
+/* =========================
+   RENDER CASES
+========================= */
+function renderCases() {
+    const container = document.getElementById("cases");
+    container.innerHTML = "";
+
+    cases.slice().reverse().forEach(c => {
+
+        let badgeClass =
+            c.status === "New" ? "new" :
+            c.status === "Under Review" ? "review" :
+            c.status === "Dispatched" ? "dispatched" :
+            "closed";
+
+        container.innerHTML += `
+        <div class="case">
+            <strong>Case #${c.id}</strong><br/>
+            <span class="badge ${badgeClass}">${c.status}</span>
+            <br/><span class="small">Credibility: ${c.credibility}</span><br/>
+            <span class="small">Assigned: ${c.assignedTo}</span><br/>
+            <span class="small">${c.location}</span><br/>
+
+            <button onclick="changeStatus(${c.id}, 'Under Review')">Review</button>
+            <button onclick="changeStatus(${c.id}, 'Dispatched')">Dispatch</button>
+            <button onclick="changeStatus(${c.id}, 'Closed')">Close</button>
+            <button onclick="assignCase(${c.id})">Assign</button>
+        </div>
+        `;
+    });
+}
+
+/* =========================
+   RENDER LOGS
+========================= */
+function renderLogs() {
+    const container = document.getElementById("logs");
+    container.innerHTML = "";
+
+    logs.slice().reverse().forEach(l => {
+        container.innerHTML += `
+            <div class="log">
+                <strong>${l.action}</strong><br/>
+                ${l.details}<br/>
+                <span class="small">${l.time}</span>
+            </div>
+        `;
+    });
+}
+</script>
+
+</body>
+</html>
